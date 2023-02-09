@@ -5,73 +5,21 @@ import (
 	"math/rand"
 	"net/http"
 	"net/url"
+	"reflect"
 	"runtime"
 	"time"
+
+	"github.com/1g0rbm/sysmonitor/internal/metric/names"
 )
-
-type gauge float64
-type counter int64
-
-type MetricInterface interface {
-	getPath() string
-}
-
-type Metric struct {
-	Name  string
-	Value gauge
-}
-
-func (m Metric) getPath() string {
-	return fmt.Sprintf("update/guage/%v/%f", m.Name, m.Value)
-}
-
-type Counter struct {
-	Name  string
-	Value counter
-}
-
-func (c Counter) getPath() string {
-	return fmt.Sprintf("update/counter/%v/%d", c.Name, c.Value)
-}
 
 type stats struct {
 	MemStats    runtime.MemStats
-	PollCounter counter
-}
-
-var metricValueExtractors = map[string]func(runtime.MemStats) gauge{
-	"Alloc":         func(m runtime.MemStats) gauge { return gauge(m.Alloc) },
-	"BuckHashSys":   func(m runtime.MemStats) gauge { return gauge(m.BuckHashSys) },
-	"Frees":         func(m runtime.MemStats) gauge { return gauge(m.Frees) },
-	"GCCPUFraction": func(m runtime.MemStats) gauge { return gauge(m.GCCPUFraction) },
-	"GCSys":         func(m runtime.MemStats) gauge { return gauge(m.GCSys) },
-	"HeapAlloc":     func(m runtime.MemStats) gauge { return gauge(m.HeapAlloc) },
-	"HeapIdle":      func(m runtime.MemStats) gauge { return gauge(m.HeapIdle) },
-	"HeapInuse":     func(m runtime.MemStats) gauge { return gauge(m.HeapInuse) },
-	"HeapObjects":   func(m runtime.MemStats) gauge { return gauge(m.HeapObjects) },
-	"HeapReleased":  func(m runtime.MemStats) gauge { return gauge(m.HeapReleased) },
-	"HeapSys":       func(m runtime.MemStats) gauge { return gauge(m.HeapSys) },
-	"LastGC":        func(m runtime.MemStats) gauge { return gauge(m.LastGC) },
-	"Lookups":       func(m runtime.MemStats) gauge { return gauge(m.Lookups) },
-	"MCacheInuse":   func(m runtime.MemStats) gauge { return gauge(m.MCacheInuse) },
-	"MCacheSys":     func(m runtime.MemStats) gauge { return gauge(m.MCacheSys) },
-	"MSpanInuse":    func(m runtime.MemStats) gauge { return gauge(m.MSpanInuse) },
-	"MSpanSys":      func(m runtime.MemStats) gauge { return gauge(m.MSpanSys) },
-	"Mallocs":       func(m runtime.MemStats) gauge { return gauge(m.Mallocs) },
-	"NextGC":        func(m runtime.MemStats) gauge { return gauge(m.NextGC) },
-	"NumForcedGC":   func(m runtime.MemStats) gauge { return gauge(m.NumForcedGC) },
-	"NumGC":         func(m runtime.MemStats) gauge { return gauge(m.NumGC) },
-	"OtherSys":      func(m runtime.MemStats) gauge { return gauge(m.OtherSys) },
-	"PauseTotalNs":  func(m runtime.MemStats) gauge { return gauge(m.PauseTotalNs) },
-	"StackInuse":    func(m runtime.MemStats) gauge { return gauge(m.StackInuse) },
-	"StackSys":      func(m runtime.MemStats) gauge { return gauge(m.StackSys) },
-	"Sys":           func(m runtime.MemStats) gauge { return gauge(m.Sys) },
-	"TotalAlloc":    func(m runtime.MemStats) gauge { return gauge(m.TotalAlloc) },
-	"RandomValue":   func(m runtime.MemStats) gauge { return gauge(rand.Float64()) },
+	PollCounter names.Counter
 }
 
 func Update() {
-	mc := &[]MetricInterface{}
+	gmc := &[]names.GaugeMetric{}
+	cmc := &[]names.CounterMetric{}
 
 	s := stats{PollCounter: 0}
 
@@ -89,32 +37,60 @@ func Update() {
 			runtime.ReadMemStats(&s.MemStats)
 			s.PollCounter += 1
 
-			mc = &[]MetricInterface{}
-			for name, extract := range metricValueExtractors {
-				*mc = append(*mc, Metric{
+			gmc = &[]names.GaugeMetric{}
+			cmc = &[]names.CounterMetric{}
+			for _, name := range names.GauageMetrics {
+				*gmc = append(*gmc, names.GaugeMetric{
 					Name:  name,
-					Value: extract(s.MemStats),
+					Value: getMemStatValue(s.MemStats, name),
 				})
 			}
-			*mc = append(*mc, Counter{
-				Name:  "PollCounter",
+			*cmc = append(*cmc, names.CounterMetric{
+				Name:  names.PollCounter,
 				Value: s.PollCounter,
 			})
 		case <-sendMetricsticer.C:
-			for _, m := range *mc {
-				url.Path = m.getPath()
-				fmt.Printf("Encoded URL is %q\n", url.String())
-
-				response := sendMetrics(url.String())
-
-				fmt.Printf("Response status code: %d\n", response.StatusCode)
-				response.Body.Close()
+			fmt.Println(*gmc)
+			for _, m := range *gmc {
+				url.Path = fmt.Sprintf("/update/gauge/%v/%f", m.Name, m.Value)
+				sc := sendMetrics(url.String())
+				fmt.Printf("Response status code: %d\n", sc)
+			}
+			for _, m := range *cmc {
+				url.Path = fmt.Sprintf("/update/counter/%v/%v", m.Name, m.Value)
+				sc := sendMetrics(url.String())
+				fmt.Printf("Response status code: %d\n", sc)
 			}
 		}
 	}
 }
 
-func sendMetrics(url string) *http.Response {
+func getMemStatValue(m runtime.MemStats, name string) names.Gauge {
+	val := reflect.ValueOf(m)
+	f := val.FieldByName(name)
+
+	if !val.IsValid() && name != names.RandomValue {
+		panic("invalid metric name")
+	}
+
+	if name == names.RandomValue {
+		return names.Gauge(rand.Float64())
+	}
+
+	switch f.Kind() {
+	case reflect.Uint64:
+		return names.Gauge(f.Uint())
+	case reflect.Uint32:
+		return names.Gauge(f.Uint())
+	case reflect.Float64:
+		return names.Gauge(f.Float())
+	default:
+		fmt.Println(name, f.Kind())
+		panic("unknown metric type")
+	}
+}
+
+func sendMetrics(url string) int {
 	client := &http.Client{}
 
 	request, err := http.NewRequest("POST", url, nil)
@@ -128,5 +104,7 @@ func sendMetrics(url string) *http.Response {
 		fmt.Println(err)
 	}
 
-	return response
+	response.Body.Close()
+
+	return response.StatusCode
 }

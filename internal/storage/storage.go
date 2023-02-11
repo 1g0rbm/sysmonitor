@@ -2,7 +2,6 @@ package storage
 
 import (
 	"errors"
-	"fmt"
 	"github.com/1g0rbm/sysmonitor/internal/metric/names"
 )
 
@@ -29,7 +28,7 @@ func GetMemStorage() *MemStorage {
 
 func (ms *MemStorage) SetGauge(name string, value names.Gauge) error {
 	if name == "" {
-		return errors.New(fmt.Sprintf("name can't be blank"))
+		return errors.New("name can't be blank")
 	}
 
 	ms.gaugeMetrics[name] = value
@@ -39,7 +38,7 @@ func (ms *MemStorage) SetGauge(name string, value names.Gauge) error {
 
 func (ms *MemStorage) SetCounter(name string, value names.Counter) error {
 	if name == "" {
-		return errors.New(fmt.Sprintf("name can't be blank"))
+		return errors.New("name can't be blank")
 	}
 
 	ms.counterMetrics[name] = value

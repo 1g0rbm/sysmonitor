@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	handlers.RegisterUpdateHndler(http.DefaultServeMux)
+	handlers.RegisterUpdateHandler(http.DefaultServeMux)
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

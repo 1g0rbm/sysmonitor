@@ -4,48 +4,74 @@ type Gauge float64
 type Counter int64
 
 type GaugeMetric struct {
-	Name  string
-	Value Gauge
+	name  string
+	value Gauge
+}
+
+func (gm GaugeMetric) Name() string {
+	return gm.name
+}
+
+func (gm GaugeMetric) Value() Gauge {
+	return gm.value
+}
+
+func NewGaugeMetric(name string, value Gauge) *GaugeMetric {
+	m := &GaugeMetric{name: name, value: value}
+	return m
 }
 
 type CounterMetric struct {
-	Name  string
-	Value Counter
+	name  string
+	value Counter
+}
+
+func (cm CounterMetric) Name() string {
+	return cm.name
+}
+
+func (cm CounterMetric) Value() Counter {
+	return cm.value
+}
+
+func NewCounterMetric(name string, value Counter) *CounterMetric {
+	m := &CounterMetric{name: name, value: value}
+	return m
 }
 
 var (
-	Alloc         string = "Alloc"
-	BuckHashSys   string = "BuckHashSys"
-	Frees         string = "Frees"
-	GCCPUFraction string = "GCCPUFraction"
-	GCSys         string = "GCSys"
-	HeapAlloc     string = "HeapAlloc"
-	HeapIdle      string = "HeapIdle"
-	HeapInuse     string = "HeapInuse"
-	HeapObjects   string = "HeapObjects"
-	HeapReleased  string = "HeapReleased"
-	HeapSys       string = "HeapSys"
-	LastGC        string = "LastGC"
-	Lookups       string = "Lookups"
-	MCacheInuse   string = "MCacheInuse"
-	MCacheSys     string = "MCacheSys"
-	MSpanInuse    string = "MSpanInuse"
-	MSpanSys      string = "MSpanSys"
-	Mallocs       string = "Mallocs"
-	NextGC        string = "NextGC"
-	NumForcedGC   string = "NumForcedGC"
-	NumGC         string = "NumGC"
-	OtherSys      string = "OtherSys"
-	PauseTotalNs  string = "PauseTotalNs"
-	StackInuse    string = "StackInuse"
-	StackSys      string = "StackSys"
-	Sys           string = "Sys"
-	TotalAlloc    string = "TotalAlloc"
-	RandomValue   string = "RandomValue"
-	PollCounter   string = "PollCounter"
+	Alloc         = "Alloc"
+	BuckHashSys   = "BuckHashSys"
+	Frees         = "Frees"
+	GCCPUFraction = "GCCPUFraction"
+	GCSys         = "GCSys"
+	HeapAlloc     = "HeapAlloc"
+	HeapIdle      = "HeapIdle"
+	HeapInuse     = "HeapInuse"
+	HeapObjects   = "HeapObjects"
+	HeapReleased  = "HeapReleased"
+	HeapSys       = "HeapSys"
+	LastGC        = "LastGC"
+	Lookups       = "Lookups"
+	MCacheInuse   = "MCacheInuse"
+	MCacheSys     = "MCacheSys"
+	MSpanInuse    = "MSpanInuse"
+	MSpanSys      = "MSpanSys"
+	Mallocs       = "Mallocs"
+	NextGC        = "NextGC"
+	NumForcedGC   = "NumForcedGC"
+	NumGC         = "NumGC"
+	OtherSys      = "OtherSys"
+	PauseTotalNs  = "PauseTotalNs"
+	StackInuse    = "StackInuse"
+	StackSys      = "StackSys"
+	Sys           = "Sys"
+	TotalAlloc    = "TotalAlloc"
+	RandomValue   = "RandomValue"
+	PollCounter   = "PollCounter"
 )
 
-var GauageMetrics []string = []string{
+var GaugeMetrics = []string{
 	Alloc,
 	BuckHashSys,
 	Frees,
@@ -75,5 +101,3 @@ var GauageMetrics []string = []string{
 	TotalAlloc,
 	RandomValue,
 }
-
-var CounterMetrics []string = []string{PollCounter}

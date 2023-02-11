@@ -45,7 +45,7 @@ func Update() {
 	updMetricsTicker := time.NewTicker(time.Second * 2)
 	sendMetricsTicker := time.NewTicker(time.Second * 10)
 
-	updUrl := url.URL{
+	updURL := url.URL{
 		Scheme: "http",
 		Host:   "localhost:8080",
 	}
@@ -63,8 +63,8 @@ func Update() {
 			*mc = append(*mc, sentCM{*names.NewCounterMetric(names.PollCounter, s.PollCounter)})
 		case <-sendMetricsTicker.C:
 			for _, m := range *mc {
-				updUrl.Path = m.ToURLPath()
-				sc, err := sendMetrics(updUrl.String())
+				updURL.Path = m.ToURLPath()
+				sc, err := sendMetrics(updURL.String())
 				if err != nil {
 					fmt.Println(err)
 					return

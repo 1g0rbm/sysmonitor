@@ -18,14 +18,14 @@ type stats struct {
 }
 
 type sentM interface {
-	ToUrlPath() string
+	ToURLPath() string
 }
 
 type sentGM struct {
 	names.GaugeMetric
 }
 
-func (gm sentGM) ToUrlPath() string {
+func (gm sentGM) ToURLPath() string {
 	return fmt.Sprintf("/update/gauge/%v/%f", gm.Name(), gm.Value())
 }
 
@@ -33,7 +33,7 @@ type sentCM struct {
 	names.CounterMetric
 }
 
-func (cm sentCM) ToUrlPath() string {
+func (cm sentCM) ToURLPath() string {
 	return fmt.Sprintf("/update/gauge/%v/%v", cm.Name(), cm.Value())
 }
 
@@ -63,7 +63,7 @@ func Update() {
 			*mc = append(*mc, sentCM{*names.NewCounterMetric(names.PollCounter, s.PollCounter)})
 		case <-sendMetricsTicker.C:
 			for _, m := range *mc {
-				updUrl.Path = m.ToUrlPath()
+				updUrl.Path = m.ToURLPath()
 				sc, err := sendMetrics(updUrl.String())
 				if err != nil {
 					fmt.Println(err)

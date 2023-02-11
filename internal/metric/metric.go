@@ -1,6 +1,7 @@
 package metric
 
 import (
+	"errors"
 	"fmt"
 	"math/rand"
 	"net/http"
@@ -39,11 +40,18 @@ func (cm sentCM) ToURLPath() string {
 
 var mc = &[]sentM{}
 
-func Update() {
+func Update(updMetricsDuration int, sendMetricsDuration int) error {
+	if updMetricsDuration >= sendMetricsDuration {
+		errMsg := fmt.Sprintf(
+			"update duration (%d) should be less than send duration (%d)",
+			updMetricsDuration,
+			sendMetricsDuration)
+		return errors.New(errMsg)
+	}
 	s := stats{PollCounter: 0}
 
-	updMetricsTicker := time.NewTicker(time.Second * 2)
-	sendMetricsTicker := time.NewTicker(time.Second * 10)
+	updMetricsTicker := time.NewTicker(time.Second * time.Duration(updMetricsDuration))
+	sendMetricsTicker := time.NewTicker(time.Second * time.Duration(sendMetricsDuration))
 
 	updURL := url.URL{
 		Scheme: "http",
@@ -67,7 +75,7 @@ func Update() {
 				sc, err := sendMetrics(updURL.String())
 				if err != nil {
 					fmt.Println(err)
-					return
+					continue
 				}
 				fmt.Printf("Response status code: %d\n", sc)
 			}

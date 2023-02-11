@@ -5,5 +5,5 @@ import (
 )
 
 func main() {
-	metric.Update()
+	metric.Update(2, 10)
 }

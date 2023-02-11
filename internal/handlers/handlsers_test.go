@@ -57,7 +57,7 @@ func Test_updateHandler(t *testing.T) {
 			method: http.MethodPost,
 			want: want{
 				contentType: "text/plain; charset=utf-8",
-				statusCode:  http.StatusBadRequest,
+				statusCode:  http.StatusNotImplemented,
 				content:     "invalid metric type\n",
 			},
 		},
@@ -67,7 +67,7 @@ func Test_updateHandler(t *testing.T) {
 			method: http.MethodPost,
 			want: want{
 				contentType: "text/plain; charset=utf-8",
-				statusCode:  http.StatusBadRequest,
+				statusCode:  http.StatusNotFound,
 				content:     "can not extract data from path\n",
 			},
 		},
@@ -77,7 +77,7 @@ func Test_updateHandler(t *testing.T) {
 			method: http.MethodPost,
 			want: want{
 				contentType: "text/plain; charset=utf-8",
-				statusCode:  http.StatusInternalServerError,
+				statusCode:  http.StatusBadRequest,
 				content:     "strconv.ParseFloat: parsing \"aaa\": invalid syntax\n",
 			},
 		},

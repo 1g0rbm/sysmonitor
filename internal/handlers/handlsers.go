@@ -25,7 +25,7 @@ func updateHandler(w http.ResponseWriter, r *http.Request) {
 
 	mType, mName, mValue, err := extractMetricFromPath(r.URL.Path)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
@@ -35,12 +35,12 @@ func updateHandler(w http.ResponseWriter, r *http.Request) {
 	case "counter":
 		saveError = updateCounter(mName, mValue)
 	default:
-		http.Error(w, "invalid metric type", http.StatusBadRequest)
+		http.Error(w, "invalid metric type", http.StatusNotImplemented)
 		return
 	}
 
 	if saveError != nil {
-		http.Error(w, saveError.Error(), http.StatusInternalServerError)
+		http.Error(w, saveError.Error(), http.StatusBadRequest)
 		return
 	}
 

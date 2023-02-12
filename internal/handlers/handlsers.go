@@ -9,57 +9,89 @@ import (
 	"strconv"
 )
 
-func RegisterUpdateHandler(r *chi.Mux) {
-	r.Post("/update/{Type}/{Name}/{Value}", updateHandler)
+func RegisterUpdateHandler(r *chi.Mux, s *storage.MemStorage) {
+	r.Post("/update/{Type}/{Name}/{Value}", func(w http.ResponseWriter, r *http.Request) {
+		var saveError error
+
+		w.Header().Set("Content-Type", "text/plain")
+
+		mType := chi.URLParam(r, "Type")
+		mName := chi.URLParam(r, "Name")
+		mValue := chi.URLParam(r, "Value")
+
+		switch mType {
+		case "gauge":
+			saveError = updateGauge(mName, mValue, s)
+		case "counter":
+			saveError = updateCounter(mName, mValue, s)
+		default:
+			http.Error(w, "invalid metric type", http.StatusNotImplemented)
+			return
+		}
+
+		if saveError != nil {
+			http.Error(w, saveError.Error(), http.StatusBadRequest)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+	})
 }
 
-var saveError error
+func RegisterGetOneHandler(r *chi.Mux, s *storage.MemStorage) {
+	r.Get("/value/{Type}/{Name}", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain")
 
-func updateHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/plain")
+		mType := chi.URLParam(r, "Type")
+		mName := chi.URLParam(r, "Name")
 
-	u := r.URL
-	fmt.Println(u)
-
-	mType := chi.URLParam(r, "Type")
-	mName := chi.URLParam(r, "Name")
-	mValue := chi.URLParam(r, "Value")
-
-	switch mType {
-	case "gauge":
-		saveError = updateGauge(mName, mValue)
-	case "counter":
-		saveError = updateCounter(mName, mValue)
-	default:
-		http.Error(w, "invalid metric type", http.StatusNotImplemented)
-		return
-	}
-
-	if saveError != nil {
-		http.Error(w, saveError.Error(), http.StatusBadRequest)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
+		switch mType {
+		case "gauge":
+			val, ok := s.GetGauge(mName)
+			if !ok {
+				http.Error(w, "metric not found", http.StatusNotFound)
+				return
+			}
+			_, err := w.Write([]byte(fmt.Sprintf("%v", val)))
+			if err != nil {
+				http.Error(w, "internal error", http.StatusInternalServerError)
+				return
+			}
+		case "counter":
+			val, ok := s.GetCounter(mName)
+			if !ok {
+				http.Error(w, "metric not found", http.StatusNotFound)
+				return
+			}
+			_, err := w.Write([]byte(fmt.Sprintf("%d", val)))
+			if err != nil {
+				http.Error(w, "internal error", http.StatusInternalServerError)
+				return
+			}
+		default:
+			http.Error(w, "invalid metric type", http.StatusNotImplemented)
+			return
+		}
+	})
 }
 
-func updateGauge(name string, value string) error {
+func updateGauge(name string, value string, s *storage.MemStorage) error {
 	v, err := strToGauge(value)
 	if err != nil {
 		return err
 	}
-	return storage.GetMemStorage().SetGauge(name, v)
+	return s.SetGauge(name, v)
 }
 
-func updateCounter(name string, value string) error {
+func updateCounter(name string, value string, s *storage.MemStorage) error {
 	v, err := strToCounter(value)
 	if err != nil {
 		return err
 	}
 
-	curVal, _ := storage.GetMemStorage().GetCounter(name)
+	curVal, _ := s.GetCounter(name)
 
-	return storage.GetMemStorage().SetCounter(name, curVal+v)
+	return s.SetCounter(name, curVal+v)
 }
 
 func strToGauge(value string) (names.Gauge, error) {

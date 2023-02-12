@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/1g0rbm/sysmonitor/internal/storage"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"log"
@@ -21,7 +22,10 @@ func InitRouter() chi.Router {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
-	handlers.RegisterUpdateHandler(r)
+	s := storage.NewMemStorage()
+
+	handlers.RegisterUpdateHandler(r, s)
+	handlers.RegisterGetOneHandler(r, s)
 
 	return r
 }

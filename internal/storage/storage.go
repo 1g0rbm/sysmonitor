@@ -15,7 +15,7 @@ type MemStorage struct {
 
 var storage *MemStorage
 
-func GetMemStorage() *MemStorage {
+func NewMemStorage() *MemStorage {
 	if storage != nil {
 		return storage
 	}

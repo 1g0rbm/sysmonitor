@@ -90,7 +90,88 @@ func Test_updateHandler(t *testing.T) {
 			defer ts.Close()
 
 			resp, body := testRequest(t, ts, tt.method, tt.path)
-			defer resp.Body.Close()
+
+			assert.Equal(t, tt.want.statusCode, resp.StatusCode)
+			assert.Equal(t, tt.want.contentType, resp.Header.Get("Content-Type"))
+			assert.Equal(t, tt.want.content, body)
+		})
+	}
+}
+
+func Test_getOneMetricHandler(t *testing.T) {
+	type want struct {
+		contentType string
+		statusCode  int
+		content     string
+	}
+	tests := []struct {
+		name   string
+		path   string
+		method string
+		want   want
+	}{
+		{
+			name:   "invalid http method test",
+			path:   "/value/counter/PollCounter",
+			method: http.MethodPost,
+			want: want{
+				contentType: "",
+				statusCode:  http.StatusMethodNotAllowed,
+				content:     "",
+			},
+		},
+		{
+			name:   "success get gauge metric value test",
+			path:   "/value/gauge/HeapReleased",
+			method: http.MethodGet,
+			want: want{
+				contentType: "text/plain",
+				statusCode:  http.StatusOK,
+				content:     "2.62144e+06",
+			},
+		},
+		{
+			name:   "success get counter metric value test",
+			path:   "/value/counter/PollCounter",
+			method: http.MethodGet,
+			want: want{
+				contentType: "text/plain",
+				statusCode:  http.StatusOK,
+				content:     "5",
+			},
+		},
+		{
+			name:   "get not existed metric value test",
+			path:   "/value/gauge/Lookups",
+			method: http.MethodGet,
+			want: want{
+				contentType: "text/plain; charset=utf-8",
+				statusCode:  http.StatusNotFound,
+				content:     "metric not found\n",
+			},
+		},
+		{
+			name:   "invalid path format test",
+			path:   "/get/invalid/path/format/PollCounter/5",
+			method: http.MethodGet,
+			want: want{
+				contentType: "text/plain; charset=utf-8",
+				statusCode:  http.StatusNotFound,
+				content:     "404 page not found\n",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := InitRouter()
+
+			ts := httptest.NewServer(r)
+			defer ts.Close()
+
+			testRequest(t, ts, "POST", "/update/gauge/HeapReleased/2621440.000000")
+			testRequest(t, ts, "POST", "/update/counter/PollCounter/5")
+
+			resp, body := testRequest(t, ts, tt.method, tt.path)
 
 			assert.Equal(t, tt.want.statusCode, resp.StatusCode)
 			assert.Equal(t, tt.want.contentType, resp.Header.Get("Content-Type"))

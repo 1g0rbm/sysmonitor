@@ -2,22 +2,37 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
-	"github.com/1g0rbm/sysmonitor/internal/metric/names"
 	"github.com/1g0rbm/sysmonitor/internal/storage"
 	"github.com/go-chi/chi/v5"
 	"net/http"
 	"strconv"
 )
 
-func RegisterGetAllHandler(r *chi.Mux, s *storage.MemStorage) {
+func RegisterGetAllHandler(r *chi.Mux, ts storage.TStorage) {
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		a := map[string]string{}
-		for key, v := range s.GetAllCounters() {
-			a[key] = fmt.Sprintf("%d", v)
+		sg, ok := ts.SType("gauge")
+		if !ok {
+			http.Error(w, "internal server error", http.StatusInternalServerError)
+			return
 		}
-		for key, v := range s.GetAllGauges() {
-			a[key] = fmt.Sprintf("%v", v)
+
+		for key, v := range sg.All() {
+			nv, _ := strconv.ParseFloat(string(v), 64)
+			a[key] = fmt.Sprintf("%v", nv)
+		}
+
+		sc, ok := ts.SType("counter")
+		if !ok {
+			http.Error(w, "internal server error", http.StatusInternalServerError)
+			return
+		}
+
+		for key, v := range sc.All() {
+			nv, _ := strconv.ParseInt(string(v), 10, 64)
+			a[key] = fmt.Sprintf("%d", nv)
 		}
 
 		d, _ := json.Marshal(a)
@@ -28,9 +43,8 @@ func RegisterGetAllHandler(r *chi.Mux, s *storage.MemStorage) {
 	})
 }
 
-func RegisterUpdateHandler(r *chi.Mux, s *storage.MemStorage) {
+func RegisterUpdateHandler(r *chi.Mux, ts storage.TStorage) {
 	r.Post("/update/{Type}/{Name}/{Value}", func(w http.ResponseWriter, r *http.Request) {
-		var saveError error
 
 		w.Header().Set("Content-Type", "text/plain")
 
@@ -38,18 +52,15 @@ func RegisterUpdateHandler(r *chi.Mux, s *storage.MemStorage) {
 		mName := chi.URLParam(r, "Name")
 		mValue := chi.URLParam(r, "Value")
 
-		switch mType {
-		case "gauge":
-			saveError = updateGauge(mName, mValue, s)
-		case "counter":
-			saveError = updateCounter(mName, mValue, s)
-		default:
+		s, ok := ts.SType(mType)
+		if !ok {
 			http.Error(w, "invalid metric type", http.StatusNotImplemented)
 			return
 		}
 
-		if saveError != nil {
-			http.Error(w, saveError.Error(), http.StatusBadRequest)
+		err := s.Set(mName, []byte(mValue))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
@@ -57,76 +68,50 @@ func RegisterUpdateHandler(r *chi.Mux, s *storage.MemStorage) {
 	})
 }
 
-func RegisterGetOneHandler(r *chi.Mux, s *storage.MemStorage) {
+func RegisterGetOneHandler(r *chi.Mux, ts storage.TStorage) {
 	r.Get("/value/{Type}/{Name}", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
 
 		mType := chi.URLParam(r, "Type")
 		mName := chi.URLParam(r, "Name")
 
-		switch mType {
-		case "gauge":
-			val, ok := s.GetGauge(mName)
-			if !ok {
-				http.Error(w, "metric not found", http.StatusNotFound)
-				return
-			}
-			_, err := w.Write([]byte(fmt.Sprintf("%v", val)))
-			if err != nil {
-				http.Error(w, "internal error", http.StatusInternalServerError)
-				return
-			}
-		case "counter":
-			val, ok := s.GetCounter(mName)
-			if !ok {
-				http.Error(w, "metric not found", http.StatusNotFound)
-				return
-			}
-			_, err := w.Write([]byte(fmt.Sprintf("%d", val)))
-			if err != nil {
-				http.Error(w, "internal error", http.StatusInternalServerError)
-				return
-			}
-		default:
+		s, sOk := ts.SType(mType)
+		if !sOk {
 			http.Error(w, "invalid metric type", http.StatusNotImplemented)
+			return
+		}
+
+		val, vOk := s.Get(mName)
+		if !vOk {
+			http.Error(w, "metric not found", http.StatusNotFound)
+			return
+		}
+
+		err := writeMetricValue(w, mType, val)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 	})
 }
 
-func updateGauge(name string, value string, s *storage.MemStorage) error {
-	v, err := strToGauge(value)
-	if err != nil {
-		return err
-	}
-	return s.SetGauge(name, v)
-}
-
-func updateCounter(name string, value string, s *storage.MemStorage) error {
-	v, err := strToCounter(value)
-	if err != nil {
-		return err
-	}
-
-	curVal, _ := s.GetCounter(name)
-
-	return s.SetCounter(name, curVal+v)
-}
-
-func strToGauge(value string) (names.Gauge, error) {
-	v, err := strconv.ParseFloat(value, 64)
-	if err != nil {
-		return 0, err
+func writeMetricValue(w http.ResponseWriter, mType string, b []byte) error {
+	switch mType {
+	case "gauge":
+		v, _ := strconv.ParseFloat(string(b), 64)
+		_, err := w.Write([]byte(fmt.Sprintf("%v", v)))
+		if err != nil {
+			return err
+		}
+	case "counter":
+		v, _ := strconv.ParseInt(string(b), 10, 64)
+		_, err := w.Write([]byte(fmt.Sprintf("%d", v)))
+		if err != nil {
+			return err
+		}
+	default:
+		return errors.New("invalid type")
 	}
 
-	return names.Gauge(v), nil
-}
-
-func strToCounter(value string) (names.Counter, error) {
-	v, err := strconv.ParseInt(value, 10, 64)
-	if err != nil {
-		return 0, err
-	}
-
-	return names.Counter(v), nil
+	return nil
 }

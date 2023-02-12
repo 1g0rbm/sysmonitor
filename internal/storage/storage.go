@@ -1,9 +1,19 @@
 package storage
 
 import (
-	"errors"
 	"github.com/1g0rbm/sysmonitor/internal/metric/names"
+	"strconv"
 )
+
+type Storage interface {
+	Set(name string, val []byte) error
+	Get(name string) ([]byte, bool)
+	All() map[string][]byte
+}
+
+type TStorage interface {
+	SType(sType string) (Storage, bool)
+}
 
 type GaugeMetricStorage map[string]names.Gauge
 type CounterMetricStorage map[string]names.Counter
@@ -13,61 +23,84 @@ type MemStorage struct {
 	counterMetrics CounterMetricStorage
 }
 
-var storage *MemStorage
+func (ms MemStorage) SType(sType string) (Storage, bool) {
+	switch sType {
+	case "gauge":
+		return ms.gaugeMetrics, true
+	case "counter":
+		return ms.counterMetrics, true
+	default:
+		return nil, false
+	}
+}
 
-func NewMemStorage() *MemStorage {
+func (gs GaugeMetricStorage) All() map[string][]byte {
+	res := map[string][]byte{}
+	for name, v := range gs {
+		res[name] = []byte(strconv.FormatFloat(float64(v), 'f', -1, 64))
+	}
+
+	return res
+}
+
+func (cs CounterMetricStorage) All() map[string][]byte {
+	res := map[string][]byte{}
+	for name, v := range cs {
+		res[name] = []byte(strconv.FormatInt(int64(v), 10))
+	}
+
+	return res
+}
+
+func (gs GaugeMetricStorage) Set(name string, val []byte) error {
+	float, err := strconv.ParseFloat(string(val), 64)
+	if err != nil {
+		return err
+	}
+
+	gs[name] = names.Gauge(float)
+
+	return nil
+}
+
+func (cs CounterMetricStorage) Set(name string, val []byte) error {
+	v, err := strconv.ParseInt(string(val), 10, 64)
+	if err != nil {
+		return err
+	}
+
+	cs[name] += names.Counter(v)
+
+	return nil
+}
+
+func (gs GaugeMetricStorage) Get(name string) ([]byte, bool) {
+	v, ok := gs[name]
+	if !ok {
+		return []byte(""), false
+	}
+
+	return []byte(strconv.FormatFloat(float64(v), 'f', -1, 64)), true
+}
+
+func (cs CounterMetricStorage) Get(name string) ([]byte, bool) {
+	v, ok := cs[name]
+	if !ok {
+		return []byte(""), false
+	}
+
+	return []byte(strconv.FormatInt(int64(v), 10)), true
+}
+
+var storage TStorage
+
+func NewStorage() TStorage {
 	if storage != nil {
 		return storage
 	}
 
-	return &MemStorage{
+	return MemStorage{
 		gaugeMetrics:   map[string]names.Gauge{},
 		counterMetrics: map[string]names.Counter{},
 	}
-}
-
-func (ms *MemStorage) SetGauge(name string, value names.Gauge) error {
-	if name == "" {
-		return errors.New("name can't be blank")
-	}
-
-	ms.gaugeMetrics[name] = value
-
-	return nil
-}
-
-func (ms *MemStorage) SetCounter(name string, value names.Counter) error {
-	if name == "" {
-		return errors.New("name can't be blank")
-	}
-
-	ms.counterMetrics[name] = value
-
-	return nil
-}
-
-func (ms *MemStorage) GetCounter(name string) (names.Counter, bool) {
-	v, ok := ms.counterMetrics[name]
-	if !ok {
-		return 0, false
-	}
-
-	return v, true
-}
-
-func (ms *MemStorage) GetGauge(name string) (names.Gauge, bool) {
-	v, ok := ms.gaugeMetrics[name]
-	if !ok {
-		return 0, false
-	}
-
-	return v, true
-}
-
-func (ms *MemStorage) GetAllCounters() CounterMetricStorage {
-	return ms.counterMetrics
-}
-
-func (ms *MemStorage) GetAllGauges() GaugeMetricStorage {
-	return ms.gaugeMetrics
 }

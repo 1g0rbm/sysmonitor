@@ -22,7 +22,7 @@ func InitRouter() chi.Router {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
-	s := storage.NewMemStorage()
+	s := storage.NewStorage()
 
 	handlers.RegisterUpdateHandler(r, s)
 	handlers.RegisterGetOneHandler(r, s)

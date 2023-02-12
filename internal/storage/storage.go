@@ -5,12 +5,12 @@ import (
 	"github.com/1g0rbm/sysmonitor/internal/metric/names"
 )
 
-type gaugeMetricStorage map[string]names.Gauge
-type counterMetricStorage map[string]names.Counter
+type GaugeMetricStorage map[string]names.Gauge
+type CounterMetricStorage map[string]names.Counter
 
 type MemStorage struct {
-	gaugeMetrics   gaugeMetricStorage
-	counterMetrics counterMetricStorage
+	gaugeMetrics   GaugeMetricStorage
+	counterMetrics CounterMetricStorage
 }
 
 var storage *MemStorage
@@ -62,4 +62,12 @@ func (ms *MemStorage) GetGauge(name string) (names.Gauge, bool) {
 	}
 
 	return v, true
+}
+
+func (ms *MemStorage) GetAllCounters() CounterMetricStorage {
+	return ms.counterMetrics
+}
+
+func (ms *MemStorage) GetAllGauges() GaugeMetricStorage {
+	return ms.gaugeMetrics
 }

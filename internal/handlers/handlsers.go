@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/1g0rbm/sysmonitor/internal/metric/names"
 	"github.com/1g0rbm/sysmonitor/internal/storage"
@@ -8,6 +9,24 @@ import (
 	"net/http"
 	"strconv"
 )
+
+func RegisterGetAllHandler(r *chi.Mux, s *storage.MemStorage) {
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		a := map[string]string{}
+		for key, v := range s.GetAllCounters() {
+			a[key] = fmt.Sprintf("%d", v)
+		}
+		for key, v := range s.GetAllGauges() {
+			a[key] = fmt.Sprintf("%v", v)
+		}
+
+		d, _ := json.Marshal(a)
+
+		w.Header().Set("Content-Type", "text/html; charset=UTF-8")
+		w.WriteHeader(http.StatusOK)
+		w.Write(d)
+	})
+}
 
 func RegisterUpdateHandler(r *chi.Mux, s *storage.MemStorage) {
 	r.Post("/update/{Type}/{Name}/{Value}", func(w http.ResponseWriter, r *http.Request) {

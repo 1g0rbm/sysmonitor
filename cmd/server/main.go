@@ -26,6 +26,7 @@ func InitRouter() chi.Router {
 
 	handlers.RegisterUpdateHandler(r, s)
 	handlers.RegisterGetOneHandler(r, s)
+	handlers.RegisterGetAllHandler(r, s)
 
 	return r
 }

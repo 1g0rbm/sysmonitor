@@ -1,12 +1,12 @@
-package handlers
+package main
 
 import (
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"github.com/stretchr/testify/require"
 )
 
 func Test_updateHandler(t *testing.T) {
@@ -26,9 +26,9 @@ func Test_updateHandler(t *testing.T) {
 			path:   "/update/counter/PollCounter/175",
 			method: http.MethodGet,
 			want: want{
-				contentType: "text/plain; charset=utf-8",
-				statusCode:  http.StatusBadRequest,
-				content:     "method not allowed\n",
+				contentType: "",
+				statusCode:  http.StatusMethodNotAllowed,
+				content:     "",
 			},
 		},
 		{
@@ -68,7 +68,7 @@ func Test_updateHandler(t *testing.T) {
 			want: want{
 				contentType: "text/plain; charset=utf-8",
 				statusCode:  http.StatusNotFound,
-				content:     "can not extract data from path\n",
+				content:     "404 page not found\n",
 			},
 		},
 		{
@@ -84,29 +84,33 @@ func Test_updateHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			r := InitRouter()
 
-			request := httptest.NewRequest(tt.method, tt.path, nil)
-			w := httptest.NewRecorder()
-			h := http.HandlerFunc(updateHandler)
+			ts := httptest.NewServer(r)
+			defer ts.Close()
 
-			h(w, request)
+			resp, body := testRequest(t, ts, tt.method, tt.path)
+			defer resp.Body.Close()
 
-			result := w.Result()
-
-			require.Equal(t, tt.want.statusCode, result.StatusCode)
-			require.Equal(t, tt.want.contentType, result.Header.Get("Content-Type"))
-
-			b, err := io.ReadAll(result.Body)
-			if err == nil {
-				require.NoError(t, err)
-			}
-
-			err = result.Body.Close()
-			if err != nil {
-				require.NoError(t, err)
-			}
-
-			require.Equal(t, tt.want.content, string(b))
+			assert.Equal(t, tt.want.statusCode, resp.StatusCode)
+			assert.Equal(t, tt.want.contentType, resp.Header.Get("Content-Type"))
+			assert.Equal(t, tt.want.content, body)
 		})
 	}
+}
+
+func testRequest(t *testing.T, ts *httptest.Server, method, path string) (*http.Response, string) {
+
+	req, err := http.NewRequest(method, ts.URL+path, nil)
+	require.NoError(t, err)
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+
+	respBody, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+
+	defer resp.Body.Close()
+
+	return resp, string(respBody)
 }

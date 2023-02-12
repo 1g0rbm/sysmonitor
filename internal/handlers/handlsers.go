@@ -1,16 +1,16 @@
 package handlers
 
 import (
-	"errors"
+	"fmt"
 	"github.com/1g0rbm/sysmonitor/internal/metric/names"
 	"github.com/1g0rbm/sysmonitor/internal/storage"
+	"github.com/go-chi/chi/v5"
 	"net/http"
 	"strconv"
-	"strings"
 )
 
-func RegisterUpdateHandler(f *http.ServeMux) {
-	f.HandleFunc("/update/", updateHandler)
+func RegisterUpdateHandler(r *chi.Mux) {
+	r.Post("/update/{Type}/{Name}/{Value}", updateHandler)
 }
 
 var saveError error
@@ -18,16 +18,12 @@ var saveError error
 func updateHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusBadRequest)
-		return
-	}
+	u := r.URL
+	fmt.Println(u)
 
-	mType, mName, mValue, err := extractMetricFromPath(r.URL.Path)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
-		return
-	}
+	mType := chi.URLParam(r, "Type")
+	mName := chi.URLParam(r, "Name")
+	mValue := chi.URLParam(r, "Value")
 
 	switch mType {
 	case "gauge":
@@ -82,18 +78,4 @@ func strToCounter(value string) (names.Counter, error) {
 	}
 
 	return names.Counter(v), nil
-}
-
-func extractMetricFromPath(path string) (mType string, mName string, mValue string, err error) {
-	p := strings.Split(path, "/")
-
-	if len(p) != 5 {
-		return "", "", "", errors.New("can not extract data from path")
-	}
-
-	mType = p[2]
-	mName = p[3]
-	mValue = p[4]
-
-	return
 }

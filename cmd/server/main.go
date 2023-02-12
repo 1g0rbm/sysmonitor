@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"log"
 	"net/http"
 
@@ -8,7 +10,18 @@ import (
 )
 
 func main() {
-	handlers.RegisterUpdateHandler(http.DefaultServeMux)
+	r := InitRouter()
+	log.Fatal(http.ListenAndServe(":8080", r))
+}
 
-	log.Fatal(http.ListenAndServe(":8080", nil))
+func InitRouter() chi.Router {
+	r := chi.NewRouter()
+	r.Use(middleware.RequestID)
+	r.Use(middleware.RealIP)
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+
+	handlers.RegisterUpdateHandler(r)
+
+	return r
 }

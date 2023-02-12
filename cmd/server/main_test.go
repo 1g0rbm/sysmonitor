@@ -169,8 +169,8 @@ func Test_getOneHandler(t *testing.T) {
 			ts := httptest.NewServer(r)
 			defer ts.Close()
 
-			testRequest(t, ts, "POST", "/update/gauge/HeapReleased/2621440.000000")
-			testRequest(t, ts, "POST", "/update/counter/PollCounter/5")
+			testRequestAndCloseBody(t, ts, "POST", "/update/gauge/HeapReleased/2621440.000000")
+			testRequestAndCloseBody(t, ts, "POST", "/update/counter/PollCounter/5")
 
 			resp, body := testRequest(t, ts, tt.method, tt.path)
 			defer resp.Body.Close()
@@ -212,8 +212,8 @@ func Test_getAllHandler(t *testing.T) {
 			ts := httptest.NewServer(r)
 			defer ts.Close()
 
-			testRequest(t, ts, "POST", "/update/gauge/HeapReleased/2621440.000000")
-			testRequest(t, ts, "POST", "/update/counter/PollCounter/5")
+			testRequestAndCloseBody(t, ts, "POST", "/update/gauge/HeapReleased/2621440.000000")
+			testRequestAndCloseBody(t, ts, "POST", "/update/counter/PollCounter/5")
 
 			resp, body := testRequest(t, ts, tt.method, tt.path)
 			defer resp.Body.Close()
@@ -226,7 +226,6 @@ func Test_getAllHandler(t *testing.T) {
 }
 
 func testRequest(t *testing.T, ts *httptest.Server, method, path string) (*http.Response, string) {
-
 	req, err := http.NewRequest(method, ts.URL+path, nil)
 	require.NoError(t, err)
 
@@ -239,4 +238,9 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string) (*http.
 	defer resp.Body.Close()
 
 	return resp, string(respBody)
+}
+
+func testRequestAndCloseBody(t *testing.T, ts *httptest.Server, method, path string) {
+	resp, _ := testRequest(t, ts, method, path)
+	resp.Body.Close()
 }

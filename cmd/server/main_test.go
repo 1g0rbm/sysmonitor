@@ -90,6 +90,7 @@ func Test_updateHandler(t *testing.T) {
 			defer ts.Close()
 
 			resp, body := testRequest(t, ts, tt.method, tt.path)
+			defer resp.Body.Close()
 
 			assert.Equal(t, tt.want.statusCode, resp.StatusCode)
 			assert.Equal(t, tt.want.contentType, resp.Header.Get("Content-Type"))
@@ -172,6 +173,7 @@ func Test_getOneHandler(t *testing.T) {
 			testRequest(t, ts, "POST", "/update/counter/PollCounter/5")
 
 			resp, body := testRequest(t, ts, tt.method, tt.path)
+			defer resp.Body.Close()
 
 			assert.Equal(t, tt.want.statusCode, resp.StatusCode)
 			assert.Equal(t, tt.want.contentType, resp.Header.Get("Content-Type"))
@@ -214,6 +216,7 @@ func Test_getAllHandler(t *testing.T) {
 			testRequest(t, ts, "POST", "/update/counter/PollCounter/5")
 
 			resp, body := testRequest(t, ts, tt.method, tt.path)
+			defer resp.Body.Close()
 
 			assert.Equal(t, tt.want.statusCode, resp.StatusCode)
 			assert.Equal(t, tt.want.contentType, resp.Header.Get("Content-Type"))

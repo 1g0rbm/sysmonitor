@@ -84,7 +84,7 @@ func Test_updateHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := InitRouter()
+			r := initRouter()
 
 			ts := httptest.NewServer(r)
 			defer ts.Close()
@@ -164,7 +164,7 @@ func Test_getOneHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := InitRouter()
+			r := initRouter()
 
 			ts := httptest.NewServer(r)
 			defer ts.Close()
@@ -207,7 +207,7 @@ func Test_getAllHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := InitRouter()
+			r := initRouter()
 
 			ts := httptest.NewServer(r)
 			defer ts.Close()

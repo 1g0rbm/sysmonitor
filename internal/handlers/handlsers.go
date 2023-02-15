@@ -10,8 +10,8 @@ import (
 	"strconv"
 )
 
-func RegisterGetAllHandler(r *chi.Mux, ts storage.TStorage) {
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+func GetAllHandler(ts storage.TStorage) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		a := map[string]string{}
 		sg, ok := ts.SType("gauge")
 		if !ok {
@@ -40,11 +40,11 @@ func RegisterGetAllHandler(r *chi.Mux, ts storage.TStorage) {
 		w.Header().Set("Content-Type", "text/html; charset=UTF-8")
 		w.WriteHeader(http.StatusOK)
 		w.Write(d)
-	})
+	}
 }
 
-func RegisterUpdateHandler(r *chi.Mux, ts storage.TStorage) {
-	r.Post("/update/{Type}/{Name}/{Value}", func(w http.ResponseWriter, r *http.Request) {
+func UpdateHandler(ts storage.TStorage) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 
 		w.Header().Set("Content-Type", "text/plain")
 
@@ -65,11 +65,11 @@ func RegisterUpdateHandler(r *chi.Mux, ts storage.TStorage) {
 		}
 
 		w.WriteHeader(http.StatusOK)
-	})
+	}
 }
 
-func RegisterGetOneHandler(r *chi.Mux, ts storage.TStorage) {
-	r.Get("/value/{Type}/{Name}", func(w http.ResponseWriter, r *http.Request) {
+func GetOneHandler(ts storage.TStorage) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
 
 		mType := chi.URLParam(r, "Type")
@@ -92,7 +92,7 @@ func RegisterGetOneHandler(r *chi.Mux, ts storage.TStorage) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-	})
+	}
 }
 
 func writeMetricValue(w http.ResponseWriter, mType string, b []byte) error {

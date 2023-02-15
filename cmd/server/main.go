@@ -13,11 +13,11 @@ import (
 const addr string = ":8080"
 
 func main() {
-	r := InitRouter()
+	r := initRouter()
 	log.Fatal(http.ListenAndServe(addr, r))
 }
 
-func InitRouter() chi.Router {
+func initRouter() chi.Router {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
@@ -26,9 +26,9 @@ func InitRouter() chi.Router {
 
 	s := storage.NewStorage()
 
-	handlers.RegisterUpdateHandler(r, s)
-	handlers.RegisterGetOneHandler(r, s)
-	handlers.RegisterGetAllHandler(r, s)
+	r.Get("/", handlers.GetAllHandler(s))
+	r.Post("/update/{Type}/{Name}/{Value}", handlers.UpdateHandler(s))
+	r.Get("/value/{Type}/{Name}", handlers.GetOneHandler(s))
 
 	return r
 }

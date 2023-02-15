@@ -21,6 +21,7 @@ const (
 type stats struct {
 	MemStats    runtime.MemStats
 	PollCounter names.Counter
+	SentM       map[string]sentM
 }
 
 type sentM interface {
@@ -43,8 +44,6 @@ func (cm sentCM) ToURLPath() string {
 	return fmt.Sprintf("/update/gauge/%v/%v", cm.Name(), cm.Value())
 }
 
-var mc = &[]sentM{}
-
 func Update(updMetricsDuration int, sendMetricsDuration int) error {
 	if updMetricsDuration >= sendMetricsDuration {
 		errMsg := fmt.Sprintf(
@@ -53,7 +52,10 @@ func Update(updMetricsDuration int, sendMetricsDuration int) error {
 			sendMetricsDuration)
 		return errors.New(errMsg)
 	}
-	s := stats{PollCounter: 0}
+	s := stats{
+		PollCounter: 0,
+		SentM:       map[string]sentM{},
+	}
 
 	updMetricsTicker := time.NewTicker(time.Second * time.Duration(updMetricsDuration))
 	sendMetricsTicker := time.NewTicker(time.Second * time.Duration(sendMetricsDuration))
@@ -69,13 +71,12 @@ func Update(updMetricsDuration int, sendMetricsDuration int) error {
 			runtime.ReadMemStats(&s.MemStats)
 			s.PollCounter += 1
 
-			mc = &[]sentM{}
 			for _, name := range names.GaugeMetrics {
-				*mc = append(*mc, sentGM{*names.NewGaugeMetric(name, getMemStatValue(s.MemStats, name))})
+				s.SentM[name] = sentGM{*names.NewGaugeMetric(name, getMemStatValue(s.MemStats, name))}
 			}
-			*mc = append(*mc, sentCM{*names.NewCounterMetric(names.PollCounter, s.PollCounter)})
+			s.SentM[names.PollCounter] = sentCM{*names.NewCounterMetric(names.PollCounter, s.PollCounter)}
 		case <-sendMetricsTicker.C:
-			for _, m := range *mc {
+			for _, m := range s.SentM {
 				updURL.Path = m.ToURLPath()
 				sc, err := sendMetrics(updURL.String())
 				if err != nil {

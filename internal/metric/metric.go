@@ -76,14 +76,14 @@ func Update(updMetricsDuration int, sendMetricsDuration int) error {
 			}
 			s.SentM[names.PollCounter] = sentCM{*names.NewCounterMetric(names.PollCounter, s.PollCounter)}
 		case <-sendMetricsTicker.C:
-			for _, m := range s.SentM {
+			for name, m := range s.SentM {
 				updURL.Path = m.ToURLPath()
-				sc, err := sendMetrics(updURL.String())
+				err := sendMetrics(updURL.String())
 				if err != nil {
 					fmt.Println(err)
 					continue
 				}
-				fmt.Printf("Response status code: %d\n", sc)
+				fmt.Printf("Metric %s was sent successfull\n", name)
 			}
 		}
 	}
@@ -114,12 +114,12 @@ func getMemStatValue(m runtime.MemStats, name string) names.Gauge {
 	}
 }
 
-func sendMetrics(url string) (int, error) {
+func sendMetrics(url string) error {
 	client := &http.Client{}
 
 	request, err := http.NewRequest("POST", url, nil)
 	if err != nil {
-		return 0, err
+		return err
 	}
 	request.Header.Add("Content-Type", "text/plain")
 
@@ -128,10 +128,14 @@ func sendMetrics(url string) (int, error) {
 		fmt.Println(err)
 	}
 
-	err = response.Body.Close()
-	if err != nil {
-		return 0, err
+	if response.StatusCode != http.StatusOK {
+		return errors.New(fmt.Sprintf("bad response code %d", response.StatusCode))
 	}
 
-	return response.StatusCode, nil
+	err = response.Body.Close()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

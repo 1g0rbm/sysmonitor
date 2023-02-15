@@ -10,9 +10,11 @@ import (
 	"github.com/1g0rbm/sysmonitor/internal/handlers"
 )
 
+const addr string = ":8080"
+
 func main() {
 	r := InitRouter()
-	log.Fatal(http.ListenAndServe(":8080", r))
+	log.Fatal(http.ListenAndServe(addr, r))
 }
 
 func InitRouter() chi.Router {

@@ -13,6 +13,11 @@ import (
 	"github.com/1g0rbm/sysmonitor/internal/metric/names"
 )
 
+const (
+	scheme string = "http"
+	host   string = "localhost:8080"
+)
+
 type stats struct {
 	MemStats    runtime.MemStats
 	PollCounter names.Counter
@@ -54,8 +59,8 @@ func Update(updMetricsDuration int, sendMetricsDuration int) error {
 	sendMetricsTicker := time.NewTicker(time.Second * time.Duration(sendMetricsDuration))
 
 	updURL := url.URL{
-		Scheme: "http",
-		Host:   "localhost:8080",
+		Scheme: scheme,
+		Host:   host,
 	}
 
 	for {

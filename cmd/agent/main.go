@@ -4,6 +4,11 @@ import (
 	"github.com/1g0rbm/sysmonitor/internal/metric"
 )
 
+const (
+	updMetricsDuration  int = 2
+	sendMetricsDuration int = 10
+)
+
 func main() {
-	metric.Update(2, 10)
+	metric.Update(updMetricsDuration, sendMetricsDuration)
 }

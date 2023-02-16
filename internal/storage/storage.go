@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"github.com/1g0rbm/sysmonitor/internal/metric/names"
+	"github.com/1g0rbm/sysmonitor/internal/metric"
 	"strconv"
 )
 
@@ -15,8 +15,8 @@ type TStorage interface {
 	SType(sType string) (Storage, bool)
 }
 
-type GaugeMetricStorage map[string]names.Gauge
-type CounterMetricStorage map[string]names.Counter
+type GaugeMetricStorage map[string]metric.Gauge
+type CounterMetricStorage map[string]metric.Counter
 
 type MemStorage struct {
 	gaugeMetrics   GaugeMetricStorage
@@ -58,7 +58,7 @@ func (gs GaugeMetricStorage) Set(name string, val []byte) error {
 		return err
 	}
 
-	gs[name] = names.Gauge(float)
+	gs[name] = metric.Gauge(float)
 
 	return nil
 }
@@ -69,7 +69,7 @@ func (cs CounterMetricStorage) Set(name string, val []byte) error {
 		return err
 	}
 
-	cs[name] += names.Counter(v)
+	cs[name] += metric.Counter(v)
 
 	return nil
 }
@@ -100,7 +100,7 @@ func NewStorage() TStorage {
 	}
 
 	return MemStorage{
-		gaugeMetrics:   map[string]names.Gauge{},
-		counterMetrics: map[string]names.Counter{},
+		gaugeMetrics:   map[string]metric.Gauge{},
+		counterMetrics: map[string]metric.Counter{},
 	}
 }

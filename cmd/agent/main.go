@@ -1,7 +1,8 @@
 package main
 
 import (
-	"github.com/1g0rbm/sysmonitor/internal/metric"
+	"github.com/1g0rbm/sysmonitor/internal/wathcer"
+	"log"
 )
 
 const (
@@ -10,5 +11,7 @@ const (
 )
 
 func main() {
-	metric.Update(updMetricsDuration, sendMetricsDuration)
+	w := wathcer.NewWatcher()
+
+	log.Fatal(w.Run(updMetricsDuration, sendMetricsDuration))
 }

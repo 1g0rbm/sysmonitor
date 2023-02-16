@@ -1,4 +1,4 @@
-package metric
+package wathcer
 
 import (
 	"errors"
@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestUpdate(t *testing.T) {
+func TestRun(t *testing.T) {
 	tests := []struct {
 		name         string
 		updDuration  int
@@ -28,7 +28,8 @@ func TestUpdate(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := Update(tt.updDuration, tt.sendDuration)
+			w := NewWatcher()
+			err := w.Run(tt.updDuration, tt.sendDuration)
 
 			assert.Equal(t, err, tt.wantErr)
 		})

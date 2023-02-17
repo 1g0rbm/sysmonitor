@@ -1,12 +1,17 @@
 package main
 
 import (
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/1g0rbm/sysmonitor/internal/application"
+	"github.com/1g0rbm/sysmonitor/internal/storage"
 )
 
 func Test_updateHandler(t *testing.T) {
@@ -84,7 +89,8 @@ func Test_updateHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := initRouter()
+			r := chi.NewRouter()
+			application.NewApp(storage.NewStorage(), r)
 
 			ts := httptest.NewServer(r)
 			defer ts.Close()
@@ -164,7 +170,8 @@ func Test_getOneHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := initRouter()
+			r := chi.NewRouter()
+			application.NewApp(storage.NewStorage(), r)
 
 			ts := httptest.NewServer(r)
 			defer ts.Close()
@@ -207,7 +214,8 @@ func Test_getAllHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := initRouter()
+			r := chi.NewRouter()
+			application.NewApp(storage.NewStorage(), r)
 
 			ts := httptest.NewServer(r)
 			defer ts.Close()

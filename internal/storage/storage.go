@@ -1,8 +1,9 @@
 package storage
 
 import (
-	"github.com/1g0rbm/sysmonitor/internal/metric"
 	"strconv"
+
+	"github.com/1g0rbm/sysmonitor/internal/metric"
 )
 
 type Storage interface {

@@ -3,12 +3,13 @@ package wathcer
 import (
 	"errors"
 	"fmt"
-	"github.com/1g0rbm/sysmonitor/internal/metric"
 	"math/rand"
 	"net/http"
 	"net/url"
 	"runtime"
 	"time"
+
+	"github.com/1g0rbm/sysmonitor/internal/metric"
 )
 
 type GMetrics map[string]metric.Gauge

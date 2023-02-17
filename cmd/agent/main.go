@@ -1,8 +1,9 @@
 package main
 
 import (
-	"github.com/1g0rbm/sysmonitor/internal/wathcer"
 	"log"
+
+	"github.com/1g0rbm/sysmonitor/internal/wathcer"
 )
 
 const (

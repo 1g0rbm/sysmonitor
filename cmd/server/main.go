@@ -1,34 +1,16 @@
 package main
 
 import (
-	"github.com/1g0rbm/sysmonitor/internal/storage"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"log"
-	"net/http"
 
-	"github.com/1g0rbm/sysmonitor/internal/handlers"
+	"github.com/go-chi/chi/v5"
+
+	"github.com/1g0rbm/sysmonitor/internal/application"
+	"github.com/1g0rbm/sysmonitor/internal/storage"
 )
 
-const addr string = ":8080"
-
 func main() {
-	r := initRouter()
-	log.Fatal(http.ListenAndServe(addr, r))
-}
+	app := application.NewApp(storage.NewStorage(), chi.NewRouter())
 
-func initRouter() chi.Router {
-	r := chi.NewRouter()
-	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
-
-	s := storage.NewStorage()
-
-	r.Get("/", handlers.GetAllHandler(s))
-	r.Post("/update/{Type}/{Name}/{Value}", handlers.UpdateHandler(s))
-	r.Get("/value/{Type}/{Name}", handlers.GetOneHandler(s))
-
-	return r
+	log.Fatal(app.Run())
 }

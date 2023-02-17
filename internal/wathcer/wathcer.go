@@ -12,9 +12,9 @@ import (
 	"github.com/1g0rbm/sysmonitor/internal/metric"
 )
 
-type GMetrics map[string]metric.Gauge
+type gMetrics map[string]metric.Gauge
 
-func (gm GMetrics) update(m runtime.MemStats) {
+func (gm gMetrics) update(m runtime.MemStats) {
 	gm["Alloc"] = metric.Gauge(m.Alloc)
 	gm["BuckHashSys"] = metric.Gauge(m.BuckHashSys)
 	gm["Frees"] = metric.Gauge(m.Frees)
@@ -45,20 +45,20 @@ func (gm GMetrics) update(m runtime.MemStats) {
 	gm["RandomValue"] = metric.Gauge(rand.Float64())
 }
 
-type CMetrics map[string]metric.Counter
+type cMetrics map[string]metric.Counter
 
-func (cm CMetrics) update() {
+func (cm cMetrics) update() {
 	cm["PollCounter"] += 1
 }
 
 type Watcher struct {
-	cm CMetrics
-	gm GMetrics
+	cm cMetrics
+	gm gMetrics
 }
 
 func NewWatcher() Watcher {
 	return Watcher{
-		gm: GMetrics{
+		gm: gMetrics{
 			"Alloc":         0,
 			"BuckHashSys":   0,
 			"Frees":         0,
@@ -88,7 +88,7 @@ func NewWatcher() Watcher {
 			"TotalAlloc":    0,
 			"RandomValue":   0,
 		},
-		cm: CMetrics{
+		cm: cMetrics{
 			"PollCounter": 0,
 		},
 	}

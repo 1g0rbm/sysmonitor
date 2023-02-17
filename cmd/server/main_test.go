@@ -63,7 +63,7 @@ func Test_updateHandler(t *testing.T) {
 			want: want{
 				contentType: "text/plain; charset=utf-8",
 				statusCode:  http.StatusNotImplemented,
-				content:     "invalid metric type\n",
+				content:     "invalid type invalid\n",
 			},
 		},
 		{
@@ -83,7 +83,7 @@ func Test_updateHandler(t *testing.T) {
 			want: want{
 				contentType: "text/plain; charset=utf-8",
 				statusCode:  http.StatusBadRequest,
-				content:     "strconv.ParseFloat: parsing \"aaa\": invalid syntax\n",
+				content:     "invalid value\n",
 			},
 		},
 	}
@@ -134,7 +134,7 @@ func Test_getOneHandler(t *testing.T) {
 			want: want{
 				contentType: "text/plain",
 				statusCode:  http.StatusOK,
-				content:     "2.62144e+06",
+				content:     "2621440.000000",
 			},
 		},
 		{
@@ -208,7 +208,7 @@ func Test_getAllHandler(t *testing.T) {
 			want: want{
 				contentType: "text/html; charset=UTF-8",
 				statusCode:  http.StatusOK,
-				content:     `{"HeapReleased":"2.62144e+06","PollCounter":"5"}`,
+				content:     `{"HeapReleased":"2621440.000000","PollCounter":"5"}`,
 			},
 		},
 	}

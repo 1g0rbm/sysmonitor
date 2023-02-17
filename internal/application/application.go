@@ -2,14 +2,13 @@ package application
 
 import (
 	"encoding/json"
-	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
+	"github.com/1g0rbm/sysmonitor/internal/metric"
 	"github.com/1g0rbm/sysmonitor/internal/storage"
 )
 
@@ -20,12 +19,12 @@ type config struct {
 }
 
 type App struct {
-	storage storage.TStorage
+	storage storage.Storage
 	router  *chi.Mux
 	config  config
 }
 
-func NewApp(s storage.TStorage, r *chi.Mux) *App {
+func NewApp(s storage.Storage, r *chi.Mux) *App {
 	app := new(App)
 	app.storage = s
 	app.router = r
@@ -51,26 +50,8 @@ func (app App) Run() error {
 
 func (app App) getAllMetricsHandler(w http.ResponseWriter, r *http.Request) {
 	a := map[string]string{}
-	sg, ok := app.storage.SType("gauge")
-	if !ok {
-		http.Error(w, "internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	for key, v := range sg.All() {
-		nv, _ := strconv.ParseFloat(string(v), 64)
-		a[key] = fmt.Sprintf("%v", nv)
-	}
-
-	sc, ok := app.storage.SType("counter")
-	if !ok {
-		http.Error(w, "internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	for key, v := range sc.All() {
-		nv, _ := strconv.ParseInt(string(v), 10, 64)
-		a[key] = fmt.Sprintf("%d", nv)
+	for _, m := range app.storage.All() {
+		a[m.Name()] = m.ValueAsString()
 	}
 
 	d, _ := json.Marshal(a)
@@ -83,21 +64,25 @@ func (app App) getAllMetricsHandler(w http.ResponseWriter, r *http.Request) {
 func (app App) updateMetricHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 
-	mType := chi.URLParam(r, "Type")
-	mName := chi.URLParam(r, "Name")
 	mValue := chi.URLParam(r, "Value")
-
-	s, ok := app.storage.SType(mType)
-	if !ok {
-		http.Error(w, "invalid metric type", http.StatusNotImplemented)
-		return
-	}
-
-	err := s.Set(mName, []byte(mValue))
+	_, err := strconv.ParseFloat(mValue, 64)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "invalid value", http.StatusBadRequest)
 		return
 	}
+
+	m, mErr := metric.NewMetric(
+		chi.URLParam(r, "Name"),
+		chi.URLParam(r, "Type"),
+		[]byte(mValue),
+	)
+
+	if mErr != nil {
+		http.Error(w, mErr.Error(), http.StatusNotImplemented)
+		return
+	}
+
+	app.storage.Set(m)
 
 	w.WriteHeader(http.StatusOK)
 }
@@ -105,45 +90,17 @@ func (app App) updateMetricHandler(w http.ResponseWriter, r *http.Request) {
 func (app App) getMetricHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 
-	mType := chi.URLParam(r, "Type")
 	mName := chi.URLParam(r, "Name")
 
-	s, sOk := app.storage.SType(mType)
-	if !sOk {
-		http.Error(w, "invalid metric type", http.StatusNotImplemented)
-		return
-	}
-
-	val, vOk := s.Get(mName)
+	m, vOk := app.storage.Get(mName)
 	if !vOk {
 		http.Error(w, "metric not found", http.StatusNotFound)
 		return
 	}
 
-	err := writeMetricValue(w, mType, val)
+	_, err := w.Write([]byte(m.ValueAsString()))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-}
-
-func writeMetricValue(w http.ResponseWriter, mType string, b []byte) error {
-	switch mType {
-	case "gauge":
-		v, _ := strconv.ParseFloat(string(b), 64)
-		_, err := w.Write([]byte(fmt.Sprintf("%v", v)))
-		if err != nil {
-			return err
-		}
-	case "counter":
-		v, _ := strconv.ParseInt(string(b), 10, 64)
-		_, err := w.Write([]byte(fmt.Sprintf("%d", v)))
-		if err != nil {
-			return err
-		}
-	default:
-		return errors.New("invalid type")
-	}
-
-	return nil
 }

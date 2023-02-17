@@ -93,13 +93,7 @@ func (cs CounterMetricStorage) Get(name string) ([]byte, bool) {
 	return []byte(strconv.FormatInt(int64(v), 10)), true
 }
 
-var storage TStorage
-
 func NewStorage() TStorage {
-	if storage != nil {
-		return storage
-	}
-
 	return MemStorage{
 		gaugeMetrics:   map[string]metric.Gauge{},
 		counterMetrics: map[string]metric.Counter{},

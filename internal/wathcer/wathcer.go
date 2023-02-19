@@ -163,7 +163,7 @@ func sendMetrics(url string) error {
 	}
 
 	if response.StatusCode != http.StatusOK {
-		return errors.New(fmt.Sprintf("bad response code %d", response.StatusCode))
+		return fmt.Errorf("bad response code %d", response.StatusCode)
 	}
 
 	err = response.Body.Close()

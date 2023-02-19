@@ -93,19 +93,9 @@ func (app App) updateMetricHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if m.Type() == metric.CounterType {
-		cm, ok := app.storage.Get(m.Name())
-		if !ok {
-			app.storage.Set(m)
-		} else {
-			c1v, _ := metric.NormalizeCounterMetricValue(m)
-			c2v, _ := metric.NormalizeCounterMetricValue(cm)
-			nm, _ := metric.NewMetric(m.Name(), m.Type(), []byte(strconv.FormatInt(int64(c1v+c2v), 10)))
-
-			app.storage.Set(nm)
-		}
-	} else {
-		app.storage.Set(m)
+	updErr := updateMetric(app.storage, m)
+	if updErr != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -130,5 +120,37 @@ func (app App) getMetricHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+}
+
+func updateMetric(s storage.Storage, m metric.IMetric) error {
+	switch m.Type() {
+	case metric.CounterType:
+		curV, curVErr := metric.NormalizeCounterMetricValue(m)
+		if curVErr != nil {
+			return curVErr
+		}
+
+		cm, ok := s.Get(m.Name())
+		if !ok {
+			s.Set(m)
+			return nil
+		}
+
+		newV, newVErr := metric.NormalizeCounterMetricValue(cm)
+		if newVErr != nil {
+			return newVErr
+		}
+
+		updM, updErr := metric.NewMetric(m.Name(), m.Type(), []byte(strconv.FormatInt(int64(curV+newV), 10)))
+		if updErr != nil {
+			return updErr
+		}
+
+		s.Set(updM)
+		return nil
+	default:
+		s.Set(m)
+		return nil
 	}
 }

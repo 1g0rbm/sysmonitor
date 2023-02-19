@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"path"
 	"runtime"
+	"strconv"
 
 	"github.com/1g0rbm/sysmonitor/internal/metric"
 	"github.com/1g0rbm/sysmonitor/internal/storage"
@@ -77,6 +78,12 @@ func (app App) updateMetricHandler(w http.ResponseWriter, r *http.Request) {
 
 	if mValue == "" || mName == "" || mType == "" {
 		http.Error(w, "invalid path params", http.StatusBadRequest)
+		return
+	}
+
+	_, vErr := strconv.ParseFloat(mValue, 64)
+	if vErr != nil {
+		http.Error(w, "invalid value", http.StatusBadRequest)
 		return
 	}
 

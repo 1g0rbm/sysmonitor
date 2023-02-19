@@ -1,7 +1,6 @@
 package metric
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 )
@@ -29,7 +28,7 @@ const (
 
 func NewMetric(name string, mType string, value []byte) (IMetric, error) {
 	if mType != GaugeType && mType != CounterType {
-		return nil, errors.New(fmt.Sprintf("invalid type %s", mType))
+		return nil, fmt.Errorf("invalid type %s", mType)
 	}
 
 	return Metric{
@@ -57,7 +56,7 @@ func (m Metric) ValueAsString() string {
 
 func NormalizeGaugeMetricValue(m IMetric) (Gauge, error) {
 	if m.Type() != GaugeType {
-		return 0, errors.New(fmt.Sprintf("expect gauge type, but %s was passed", m.Type()))
+		return 0, fmt.Errorf("expect gauge type, but %s was passed", m.Type())
 	}
 
 	val, err := strconv.ParseFloat(m.ValueAsString(), 64)
@@ -69,7 +68,7 @@ func NormalizeGaugeMetricValue(m IMetric) (Gauge, error) {
 
 func NormalizeCounterMetricValue(m IMetric) (Counter, error) {
 	if m.Type() != CounterType {
-		return 0, errors.New(fmt.Sprintf("expect counter type, but %s was passed", m.Type()))
+		return 0, fmt.Errorf("expect counter type, but %s was passed", m.Type())
 	}
 
 	val, err := strconv.ParseInt(m.ValueAsString(), 10, 64)

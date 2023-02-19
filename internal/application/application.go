@@ -93,7 +93,20 @@ func (app App) updateMetricHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	app.storage.Set(m)
+	if m.Type() == metric.CounterType {
+		cm, ok := app.storage.Get(m.Name())
+		if !ok {
+			app.storage.Set(m)
+		} else {
+			c1v, _ := metric.NormalizeCounterMetricValue(m)
+			c2v, _ := metric.NormalizeCounterMetricValue(cm)
+			nm, _ := metric.NewMetric(m.Name(), m.Type(), []byte(strconv.FormatInt(int64(c1v+c2v), 10)))
+
+			app.storage.Set(nm)
+		}
+	} else {
+		app.storage.Set(m)
+	}
 
 	w.WriteHeader(http.StatusOK)
 }

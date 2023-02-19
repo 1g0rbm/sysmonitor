@@ -1,14 +1,12 @@
 package application
 
 import (
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"html/template"
 	"net/http"
 	"path"
 	"runtime"
-	"strconv"
-
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 
 	"github.com/1g0rbm/sysmonitor/internal/metric"
 	"github.com/1g0rbm/sysmonitor/internal/storage"
@@ -73,19 +71,16 @@ func (app App) getAllMetricsHandler(w http.ResponseWriter, r *http.Request) {
 func (app App) updateMetricHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 
+	mName := chi.URLParam(r, "Name")
+	mType := chi.URLParam(r, "Type")
 	mValue := chi.URLParam(r, "Value")
-	_, err := strconv.ParseFloat(mValue, 64)
-	if err != nil {
-		http.Error(w, "invalid value", http.StatusBadRequest)
+
+	if mValue == "" || mName == "" || mType == "" {
+		http.Error(w, "invalid path params", http.StatusBadRequest)
 		return
 	}
 
-	m, mErr := metric.NewMetric(
-		chi.URLParam(r, "Name"),
-		chi.URLParam(r, "Type"),
-		[]byte(mValue),
-	)
-
+	m, mErr := metric.NewMetric(mName, mType, []byte(mValue))
 	if mErr != nil {
 		http.Error(w, mErr.Error(), http.StatusNotImplemented)
 		return
@@ -100,6 +95,10 @@ func (app App) getMetricHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 
 	mName := chi.URLParam(r, "Name")
+	if mName == "" {
+		http.Error(w, "invalid path params", http.StatusBadRequest)
+		return
+	}
 
 	m, vOk := app.storage.Get(mName)
 	if !vOk {

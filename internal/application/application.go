@@ -83,7 +83,7 @@ func (app App) updateMetricHandler(w http.ResponseWriter, r *http.Request) {
 
 	_, vErr := strconv.ParseFloat(mValue, 64)
 	if vErr != nil {
-		http.Error(w, "value should be a numeric", http.StatusBadRequest)
+		http.Error(w, "invalid value", http.StatusBadRequest)
 		return
 	}
 

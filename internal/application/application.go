@@ -1,8 +1,10 @@
 package application
 
 import (
-	"encoding/json"
+	"html/template"
 	"net/http"
+	"path"
+	"runtime"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
@@ -49,16 +51,23 @@ func (app App) Run() error {
 }
 
 func (app App) getAllMetricsHandler(w http.ResponseWriter, r *http.Request) {
-	a := map[string]string{}
-	for _, m := range app.storage.All() {
-		a[m.Name()] = m.ValueAsString()
+	_, filename, _, ok := runtime.Caller(0)
+
+	if !ok {
+		http.Error(w, "can not find template", http.StatusInternalServerError)
 	}
 
-	d, _ := json.Marshal(a)
+	tmpl := template.Must(template.ParseFiles(path.Dir(filename) + "/../template/metrics.html"))
 
-	w.Header().Set("Content-Type", "text/html; charset=UTF-8")
-	w.WriteHeader(http.StatusOK)
-	w.Write(d)
+	type data struct {
+		Metrics map[string]metric.IMetric
+	}
+
+	err := tmpl.Execute(w, data{Metrics: app.storage.All()})
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 func (app App) updateMetricHandler(w http.ResponseWriter, r *http.Request) {

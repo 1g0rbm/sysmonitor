@@ -206,9 +206,25 @@ func Test_getAllHandler(t *testing.T) {
 			path:   "/",
 			method: http.MethodGet,
 			want: want{
-				contentType: "text/html; charset=UTF-8",
+				contentType: "text/html; charset=utf-8",
 				statusCode:  http.StatusOK,
-				content:     `{"HeapReleased":"2621440.000000","PollCounter":"5"}`,
+				content: `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>All metrics</title>
+</head>
+<body>
+<h1>List of metrics</h1>
+<ul>
+    
+        <li>HeapReleased:2621440.000000</li>
+    
+        <li>PollCounter:5</li>
+    
+</ul>
+</body>
+</html>`,
 			},
 		},
 	}

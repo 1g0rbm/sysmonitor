@@ -29,6 +29,10 @@ func (ms MemStorage) Get(name string) (metric.IMetric, bool) {
 	return v, true
 }
 
-func NewStorage() Storage {
+func newMemStorage() MemStorage {
 	return make(MemStorage)
+}
+
+func NewStorage() Storage {
+	return newMemStorage()
 }

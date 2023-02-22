@@ -12,6 +12,11 @@ import (
 	"github.com/1g0rbm/sysmonitor/internal/metric"
 )
 
+const (
+	scheme string = "http"
+	host   string = "localhost:8080"
+)
+
 type gMetrics map[string]metric.Gauge
 
 func (gm gMetrics) update(m runtime.MemStats) {
@@ -102,11 +107,6 @@ func (w Watcher) Run(updMetricsDuration int, sendMetricsDuration int) error {
 			sendMetricsDuration)
 		return errors.New(errMsg)
 	}
-
-	const (
-		scheme string = "http"
-		host   string = "localhost:8080"
-	)
 
 	updMetricsTicker := time.NewTicker(time.Second * time.Duration(updMetricsDuration))
 	sendMetricsTicker := time.NewTicker(time.Second * time.Duration(sendMetricsDuration))

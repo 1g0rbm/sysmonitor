@@ -3,19 +3,24 @@ package watcher
 import (
 	"errors"
 	"fmt"
+	"github.com/1g0rbm/sysmonitor/internal/metric"
 	"math/rand"
 	"net/http"
 	"net/url"
 	"runtime"
 	"time"
-
-	"github.com/1g0rbm/sysmonitor/internal/metric"
 )
 
 const (
 	scheme string = "http"
 	host   string = "localhost:8080"
 )
+
+type cMetric struct {
+	name  string
+	mType string
+	value string
+}
 
 type gMetrics map[string]metric.Gauge
 
@@ -61,6 +66,14 @@ type Watcher struct {
 	gm gMetrics
 }
 
+func newCommonMetric(name string, mType string, value string) cMetric {
+	return cMetric{
+		name:  name,
+		mType: mType,
+		value: value,
+	}
+}
+
 func NewWatcher() Watcher {
 	return Watcher{
 		gm: gMetrics{
@@ -99,6 +112,25 @@ func NewWatcher() Watcher {
 	}
 }
 
+func (w Watcher) update(rms runtime.MemStats) {
+	w.cm.update()
+	w.gm.update(rms)
+}
+
+func (w Watcher) getAll() []cMetric {
+	var all []cMetric
+
+	for name, value := range w.gm {
+		all = append(all, newCommonMetric(name, metric.GaugeType, fmt.Sprintf("%f", value)))
+	}
+
+	for name, value := range w.cm {
+		all = append(all, newCommonMetric(name, metric.CounterType, fmt.Sprintf("%d", value)))
+	}
+
+	return all
+}
+
 func (w Watcher) Run(updMetricsDuration int, sendMetricsDuration int) error {
 	if updMetricsDuration >= sendMetricsDuration {
 		errMsg := fmt.Sprintf(
@@ -122,27 +154,16 @@ func (w Watcher) Run(updMetricsDuration int, sendMetricsDuration int) error {
 		select {
 		case <-updMetricsTicker.C:
 			runtime.ReadMemStats(&rms)
-
-			w.cm.update()
-			w.gm.update(rms)
+			w.update(rms)
 		case <-sendMetricsTicker.C:
-			for name, val := range w.gm {
-				updURL.Path = fmt.Sprintf("/update/gauge/%v/%f", name, val)
+			for _, m := range w.getAll() {
+				updURL.Path = fmt.Sprintf("/update/%s/%v/%s", m.mType, m.name, m.value)
 				err := sendMetrics(updURL.String())
 				if err != nil {
 					fmt.Println(err)
 					continue
 				}
-				fmt.Printf("Metric %s was sent successfull\n", name)
-			}
-			for name, val := range w.cm {
-				updURL.Path = fmt.Sprintf("/update/counter/%v/%d", name, val)
-				err := sendMetrics(updURL.String())
-				if err != nil {
-					fmt.Println(err)
-					continue
-				}
-				fmt.Printf("Metric %s was sent successfull\n", name)
+				fmt.Printf("Metric %s was sent successfull\n", m.name)
 			}
 		}
 	}

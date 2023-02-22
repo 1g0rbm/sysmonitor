@@ -1,10 +1,9 @@
 package application
 
 import (
+	"github.com/1g0rbm/sysmonitor/internal/tmp"
 	"html/template"
 	"net/http"
-	"path"
-	"runtime"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
@@ -51,21 +50,16 @@ func (app App) Run() error {
 }
 
 func (app App) getAllMetricsHandler(w http.ResponseWriter, r *http.Request) {
-	_, filename, _, ok := runtime.Caller(0)
-
-	if !ok {
-		http.Error(w, "can not find template", http.StatusInternalServerError)
+	t, tErr := template.New("metrics").Parse(tmp.AllMetricsTmp)
+	if tErr != nil {
+		http.Error(w, tErr.Error(), http.StatusInternalServerError)
 	}
-
-	tmpl := template.Must(template.ParseFiles(path.Dir(filename) + "/../template/metrics.html"))
 
 	type data struct {
 		Metrics map[string]metric.IMetric
 	}
 
-	err := tmpl.Execute(w, data{Metrics: app.storage.All()})
-
-	if err != nil {
+	if err := t.Execute(w, data{Metrics: app.storage.All()}); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }

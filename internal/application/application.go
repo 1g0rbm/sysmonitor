@@ -1,6 +1,7 @@
 package application
 
 import (
+	"fmt"
 	"github.com/1g0rbm/sysmonitor/internal/tmp"
 	"html/template"
 	"net/http"
@@ -117,31 +118,38 @@ func (app App) getMetricHandler(w http.ResponseWriter, r *http.Request) {
 func updateMetric(s storage.Storage, m metric.IMetric) error {
 	switch m.Type() {
 	case metric.CounterType:
-		curV, curVErr := metric.NormalizeCounterMetricValue(m)
+		cm, ok := m.(metric.CounterMetric)
+		if !ok {
+			return fmt.Errorf("impossible to cast ")
+		}
+
+		curV, curVErr := cm.NormalizeValue()
 		if curVErr != nil {
 			return curVErr
 		}
 
-		cm, ok := s.Get(m.Name())
-		if !ok {
+		em, emOk := s.GetCounter(m.Name())
+		if !emOk {
 			s.Set(m)
 			return nil
 		}
 
-		newV, newVErr := metric.NormalizeCounterMetricValue(cm)
-		if newVErr != nil {
-			return newVErr
+		emv, emvErr := em.NormalizeValue()
+		if emvErr != nil {
+			return emvErr
 		}
 
-		updM, updErr := metric.NewMetric(m.Name(), m.Type(), []byte(strconv.FormatInt(int64(curV+newV), 10)))
+		updM, updErr := metric.NewMetric(m.Name(), m.Type(), []byte(strconv.FormatInt(int64(curV+emv), 10)))
 		if updErr != nil {
 			return updErr
 		}
 
 		s.Set(updM)
 		return nil
-	default:
+	case metric.GaugeType:
 		s.Set(m)
 		return nil
+	default:
+		return fmt.Errorf("undefined metric type '%s'", m.Type())
 	}
 }

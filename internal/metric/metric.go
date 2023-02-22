@@ -15,7 +15,13 @@ type IMetric interface {
 	ValueAsString() string
 }
 
-type Metric struct {
+type GaugeMetric struct {
+	name  string
+	mType string
+	value []byte
+}
+
+type CounterMetric struct {
 	name  string
 	mType string
 	value []byte
@@ -27,51 +33,66 @@ const (
 )
 
 func NewMetric(name string, mType string, value []byte) (IMetric, error) {
-	if mType != GaugeType && mType != CounterType {
+	switch mType {
+	case GaugeType:
+		return GaugeMetric{
+			name:  name,
+			value: value,
+			mType: mType,
+		}, nil
+	case CounterType:
+		return CounterMetric{
+			name:  name,
+			value: value,
+			mType: mType,
+		}, nil
+	default:
 		return nil, fmt.Errorf("invalid type %s", mType)
 	}
-
-	return Metric{
-		name:  name,
-		value: value,
-		mType: mType,
-	}, nil
 }
 
-func (m Metric) Name() string {
-	return m.name
+func (gm GaugeMetric) Name() string {
+	return gm.name
 }
 
-func (m Metric) Type() string {
-	return m.mType
+func (gm GaugeMetric) Type() string {
+	return gm.mType
 }
 
-func (m Metric) Value() []byte {
-	return m.value
+func (gm GaugeMetric) Value() []byte {
+	return gm.value
 }
 
-func (m Metric) ValueAsString() string {
-	return string(m.value)
+func (gm GaugeMetric) ValueAsString() string {
+	return string(gm.value)
 }
 
-func NormalizeGaugeMetricValue(m IMetric) (Gauge, error) {
-	if m.Type() != GaugeType {
-		return 0, fmt.Errorf("expect gauge type, but %s was passed", m.Type())
-	}
-
-	val, err := strconv.ParseFloat(m.ValueAsString(), 64)
+func (gm GaugeMetric) NormalizeValue() (Gauge, error) {
+	val, err := strconv.ParseFloat(gm.ValueAsString(), 64)
 	if err != nil {
 		return 0, err
 	}
 	return Gauge(val), nil
 }
 
-func NormalizeCounterMetricValue(m IMetric) (Counter, error) {
-	if m.Type() != CounterType {
-		return 0, fmt.Errorf("expect counter type, but %s was passed", m.Type())
-	}
+func (cm CounterMetric) Name() string {
+	return cm.name
+}
 
-	val, err := strconv.ParseInt(m.ValueAsString(), 10, 64)
+func (cm CounterMetric) Type() string {
+	return cm.mType
+}
+
+func (cm CounterMetric) Value() []byte {
+	return cm.value
+}
+
+func (cm CounterMetric) ValueAsString() string {
+	return string(cm.value)
+}
+
+func (cm CounterMetric) NormalizeValue() (Counter, error) {
+	val, err := strconv.ParseInt(cm.ValueAsString(), 10, 64)
 	if err != nil {
 		return 0, err
 	}

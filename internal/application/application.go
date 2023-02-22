@@ -5,6 +5,7 @@ import (
 	"github.com/1g0rbm/sysmonitor/internal/tmp"
 	"html/template"
 	"net/http"
+	"regexp"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
@@ -68,13 +69,14 @@ func (app App) updateMetricHandler(w http.ResponseWriter, r *http.Request) {
 	mType := chi.URLParam(r, "Type")
 	mValue := chi.URLParam(r, "Value")
 
-	if mValue == "" || mName == "" || mType == "" {
+	fmt.Println(mValue)
+
+	if mName == "" || mType == "" {
 		http.Error(w, "invalid path params", http.StatusBadRequest)
 		return
 	}
 
-	_, vErr := strconv.ParseFloat(mValue, 64)
-	if vErr != nil {
+	if ok, _ := regexp.MatchString("[0-9]+(.[0-9]+)?", mValue); !ok {
 		http.Error(w, "invalid value", http.StatusBadRequest)
 		return
 	}

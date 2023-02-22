@@ -10,7 +10,7 @@ const AllMetricsTmp = `
 <body>
 <h1>List of metrics</h1>
 <ul>
-    {{range .Metrics}}
+    {{range .}}
         <li>{{.Name}}:{{.ValueAsString}}</li>
     {{end}}
 </ul>

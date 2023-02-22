@@ -55,11 +55,7 @@ func (app App) getAllMetricsHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, tErr.Error(), http.StatusInternalServerError)
 	}
 
-	type data struct {
-		Metrics map[string]metric.IMetric
-	}
-
-	if err := t.Execute(w, data{Metrics: app.storage.All()}); err != nil {
+	if err := t.Execute(w, app.storage.All()); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }

@@ -1,6 +1,7 @@
 package watcher
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/1g0rbm/sysmonitor/internal/metric"
@@ -12,8 +13,10 @@ import (
 )
 
 const (
-	scheme string = "http"
-	host   string = "localhost:8080"
+	scheme         string = "http"
+	host           string = "localhost:8080"
+	clientTimeout         = 10 * time.Second
+	requestTimeout        = 5 * time.Second
 )
 
 type cMetric struct {
@@ -170,7 +173,12 @@ func (w Watcher) Run(updMetricsDuration int, sendMetricsDuration int) error {
 }
 
 func sendMetrics(url string) error {
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: clientTimeout,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
+	defer cancel()
 
 	request, err := http.NewRequest("POST", url, nil)
 	if err != nil {
@@ -178,8 +186,8 @@ func sendMetrics(url string) error {
 	}
 	request.Header.Add("Content-Type", "text/plain")
 
-	response, err := client.Do(request)
-	if err != nil {
+	response, rErr := client.Do(request.WithContext(ctx))
+	if rErr != nil {
 		fmt.Println(err)
 	}
 

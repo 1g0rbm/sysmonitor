@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	"github.com/1g0rbm/sysmonitor/internal/wathcer"
+	"github.com/1g0rbm/sysmonitor/internal/watcher"
 )
 
 const (
@@ -12,7 +12,7 @@ const (
 )
 
 func main() {
-	w := wathcer.NewWatcher()
+	w := watcher.NewWatcher()
 
 	log.Fatal(w.Run(updMetricsDuration, sendMetricsDuration))
 }

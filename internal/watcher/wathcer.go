@@ -1,4 +1,4 @@
-package wathcer
+package watcher
 
 import (
 	"errors"

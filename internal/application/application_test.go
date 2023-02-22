@@ -1,4 +1,4 @@
-package main
+package application
 
 import (
 	"io"
@@ -6,11 +6,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/1g0rbm/sysmonitor/internal/application"
 	"github.com/1g0rbm/sysmonitor/internal/storage"
 )
 
@@ -89,10 +87,9 @@ func Test_updateHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := chi.NewRouter()
-			application.NewApp(storage.NewStorage(), r)
+			app := NewApp(storage.NewStorage())
 
-			ts := httptest.NewServer(r)
+			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()
 
 			resp, body := testRequest(t, ts, tt.method, tt.path)
@@ -170,10 +167,9 @@ func Test_getOneHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := chi.NewRouter()
-			application.NewApp(storage.NewStorage(), r)
+			app := NewApp(storage.NewStorage())
 
-			ts := httptest.NewServer(r)
+			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()
 
 			testRequestAndCloseBody(t, ts, "POST", "/update/gauge/HeapReleased/2621440.000000")
@@ -208,7 +204,8 @@ func Test_getAllHandler(t *testing.T) {
 			want: want{
 				contentType: "text/html; charset=utf-8",
 				statusCode:  http.StatusOK,
-				content: `<!DOCTYPE html>
+				content: `
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -224,16 +221,16 @@ func Test_getAllHandler(t *testing.T) {
     
 </ul>
 </body>
-</html>`,
+</html>
+`,
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := chi.NewRouter()
-			application.NewApp(storage.NewStorage(), r)
+			app := NewApp(storage.NewStorage())
 
-			ts := httptest.NewServer(r)
+			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()
 
 			testRequestAndCloseBody(t, ts, "POST", "/update/gauge/HeapReleased/2621440.000000")

@@ -115,6 +115,10 @@ func (app App) getMetricHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (app App) getRouter() chi.Router {
+	return app.router
+}
+
 func updateMetric(s storage.Storage, m metric.IMetric) error {
 	switch m.Type() {
 	case metric.CounterType:

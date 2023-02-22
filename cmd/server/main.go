@@ -3,14 +3,12 @@ package main
 import (
 	"log"
 
-	"github.com/go-chi/chi/v5"
-
 	"github.com/1g0rbm/sysmonitor/internal/application"
 	"github.com/1g0rbm/sysmonitor/internal/storage"
 )
 
 func main() {
-	run := application.NewApp(storage.NewStorage(), chi.NewRouter())
+	app := application.NewApp(storage.NewStorage())
 
-	log.Fatal(run())
+	log.Fatal(app.Run())
 }

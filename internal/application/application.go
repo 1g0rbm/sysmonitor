@@ -22,28 +22,32 @@ type config struct {
 
 type App struct {
 	storage storage.Storage
+	router  *chi.Mux
 	config  config
 }
 
-func NewApp(s storage.Storage, r *chi.Mux) func() error {
+func NewApp(s storage.Storage) *App {
 	app := new(App)
 	app.storage = s
+	app.router = chi.NewRouter()
 	app.config = config{
 		addr: addr,
 	}
 
-	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
+	app.router.Use(middleware.RequestID)
+	app.router.Use(middleware.RealIP)
+	app.router.Use(middleware.Logger)
+	app.router.Use(middleware.Recoverer)
 
-	r.Get("/", app.getAllMetricsHandler)
-	r.Post("/update/{Type}/{Name}/{Value}", app.updateMetricHandler)
-	r.Get("/value/{Type}/{Name}", app.getMetricHandler)
+	app.router.Get("/", app.getAllMetricsHandler)
+	app.router.Post("/update/{Type}/{Name}/{Value}", app.updateMetricHandler)
+	app.router.Get("/value/{Type}/{Name}", app.getMetricHandler)
 
-	return func() error {
-		return http.ListenAndServe(app.config.addr, r)
-	}
+	return app
+}
+
+func (app App) Run() error {
+	return http.ListenAndServe(app.config.addr, app.router)
 }
 
 func (app App) getAllMetricsHandler(w http.ResponseWriter, r *http.Request) {

@@ -43,6 +43,20 @@ func TestRun(t *testing.T) {
 			ms := s.All()
 			assert.Len(t, ms, 2)
 			assert.Equal(t, tt.data, ms)
+
+			gUpdErr := s.Update(tt.data["GCSys"])
+			assert.Nil(t, gUpdErr)
+
+			m4, ok4 := s.Get("GCSys")
+			assert.True(t, ok4)
+			assert.Equal(t, tt.data["GCSys"], m4)
+
+			cUpdErr := s.Update(tt.data["PollCounter"])
+			assert.Nil(t, cUpdErr)
+
+			m5, ok5 := s.Get("PollCounter")
+			assert.True(t, ok5)
+			assert.Equal(t, "20", m5.ValueAsString())
 		})
 	}
 }

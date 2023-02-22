@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	app := application.NewApp(storage.NewStorage(), chi.NewRouter())
+	run := application.NewApp(storage.NewStorage(), chi.NewRouter())
 
-	log.Fatal(app.Run())
+	log.Fatal(run())
 }

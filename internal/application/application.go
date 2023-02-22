@@ -1,13 +1,14 @@
 package application
 
 import (
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"html/template"
 	"net/http"
 	"path"
 	"runtime"
 	"strconv"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 
 	"github.com/1g0rbm/sysmonitor/internal/metric"
 	"github.com/1g0rbm/sysmonitor/internal/storage"
@@ -21,14 +22,12 @@ type config struct {
 
 type App struct {
 	storage storage.Storage
-	router  *chi.Mux
 	config  config
 }
 
-func NewApp(s storage.Storage, r *chi.Mux) *App {
+func NewApp(s storage.Storage, r *chi.Mux) func() error {
 	app := new(App)
 	app.storage = s
-	app.router = r
 	app.config = config{
 		addr: addr,
 	}
@@ -42,11 +41,9 @@ func NewApp(s storage.Storage, r *chi.Mux) *App {
 	r.Post("/update/{Type}/{Name}/{Value}", app.updateMetricHandler)
 	r.Get("/value/{Type}/{Name}", app.getMetricHandler)
 
-	return app
-}
-
-func (app App) Run() error {
-	return http.ListenAndServe(app.config.addr, app.router)
+	return func() error {
+		return http.ListenAndServe(app.config.addr, r)
+	}
 }
 
 func (app App) getAllMetricsHandler(w http.ResponseWriter, r *http.Request) {

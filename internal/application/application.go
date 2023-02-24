@@ -79,12 +79,12 @@ func (app App) updateMetricHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	m, mErr := metric.NewMetric(mName, mType, mValue)
+	if errors.Is(metric.ErrInvalidValue, mErr) {
+		http.Error(w, mErr.Error(), http.StatusBadRequest)
+		return
+	}
 	if mErr != nil {
-		if errors.Is(metric.ErrInvalidValue, mErr) {
-			http.Error(w, mErr.Error(), http.StatusBadRequest)
-		} else {
-			http.Error(w, mErr.Error(), http.StatusNotImplemented)
-		}
+		http.Error(w, mErr.Error(), http.StatusNotImplemented)
 		return
 	}
 

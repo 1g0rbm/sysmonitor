@@ -82,13 +82,12 @@ func (ms MemStorage) Update(m metric.IMetric) error {
 		}
 
 		em, emErr := ms.GetCounter(m.Name())
+		if errors.Is(ErrMetricNotFound, emErr) {
+			ms.Set(m)
+			return nil
+		}
 		if emErr != nil {
-			if errors.Is(ErrMetricNotFound, emErr) {
-				ms.Set(m)
-				return nil
-			} else {
-				return emErr
-			}
+			return emErr
 		}
 
 		updM, updErr := cm.Update(em)

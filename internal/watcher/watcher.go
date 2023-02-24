@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/1g0rbm/sysmonitor/internal/metric"
 	"math/rand"
 	"net/http"
 	"net/url"
 	"runtime"
 	"time"
+
+	"github.com/1g0rbm/sysmonitor/internal/metric"
 )
 
 const (

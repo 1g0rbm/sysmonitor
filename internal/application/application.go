@@ -10,7 +10,6 @@ import (
 
 	"github.com/1g0rbm/sysmonitor/internal/metric"
 	"github.com/1g0rbm/sysmonitor/internal/storage"
-	"github.com/1g0rbm/sysmonitor/internal/tmp"
 )
 
 const addr = ":8080"
@@ -55,7 +54,7 @@ func (app App) Run() error {
 }
 
 func (app App) getAllMetricsHandler(w http.ResponseWriter, r *http.Request) {
-	t, tErr := template.New("metrics").Parse(tmp.AllMetricsTmp)
+	t, tErr := template.New("metrics").Parse(AllMetricsTemplate)
 	if tErr != nil {
 		http.Error(w, tErr.Error(), http.StatusInternalServerError)
 	}

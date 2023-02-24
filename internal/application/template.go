@@ -1,6 +1,6 @@
-package tmp
+package application
 
-const AllMetricsTmp = `
+const AllMetricsTemplate = `
 <!DOCTYPE html>
 <html lang="en">
 <head>

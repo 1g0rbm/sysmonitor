@@ -2,6 +2,7 @@ package storage
 
 import (
 	"fmt"
+
 	"github.com/1g0rbm/sysmonitor/internal/metric"
 )
 

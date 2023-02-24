@@ -119,7 +119,10 @@ func (cm CounterMetric) NormalizeValue() (Counter, error) {
 }
 
 func (cm CounterMetric) Update(ncm CounterMetric) (IMetric, error) {
-	m, err := NewMetric(cm.Name(), cm.Type(), fmt.Sprintf("%d", cm.Value()+ncm.Value()))
+	nv := cm.Value() + ncm.Value()
+	snv := fmt.Sprintf("%d", nv)
+
+	m, err := NewMetric(cm.Name(), cm.Type(), snv)
 	if err != nil {
 		return nil, err
 	}

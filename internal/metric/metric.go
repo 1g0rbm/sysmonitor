@@ -71,7 +71,7 @@ func (gm GaugeMetric) Value() Gauge {
 }
 
 func (gm GaugeMetric) ValueAsString() string {
-	return fmt.Sprintf("%.6f", gm.value)
+	return fmt.Sprintf("%.6g", gm.value)
 }
 
 func (gm GaugeMetric) NormalizeValue() (Gauge, error) {

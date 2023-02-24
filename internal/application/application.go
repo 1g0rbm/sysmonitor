@@ -106,8 +106,8 @@ func (app App) getMetricHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	m, vOk := app.storage.Get(mName)
-	if !vOk {
+	m, vErr := app.storage.Get(mName)
+	if vErr != nil {
 		http.Error(w, "metric not found", http.StatusNotFound)
 		return
 	}

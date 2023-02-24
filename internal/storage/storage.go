@@ -1,18 +1,21 @@
 package storage
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/1g0rbm/sysmonitor/internal/metric"
 )
 
+var ErrMetricNotFound error
+
 type Storage interface {
 	Set(m metric.IMetric)
-	Get(name string) (metric.IMetric, bool)
+	Get(name string) (metric.IMetric, error)
 	All() map[string]metric.IMetric
 	Update(m metric.IMetric) error
-	GetCounter(name string) (metric.CounterMetric, bool)
-	GetGauge(name string) (metric.GaugeMetric, bool)
+	GetCounter(name string) (metric.CounterMetric, error)
+	GetGauge(name string) (metric.GaugeMetric, error)
 }
 
 type MemStorage map[string]metric.IMetric
@@ -25,43 +28,48 @@ func (ms MemStorage) Set(m metric.IMetric) {
 	ms[m.Name()] = m
 }
 
-func (ms MemStorage) Get(name string) (metric.IMetric, bool) {
+func (ms MemStorage) Get(name string) (metric.IMetric, error) {
 	v, ok := ms[name]
 	if !ok {
-		return nil, false
+		ErrMetricNotFound = fmt.Errorf("metric not found by name '%s'", name)
+		return nil, ErrMetricNotFound
 	}
 
-	return v, true
+	return v, nil
 }
 
-func (ms MemStorage) GetCounter(name string) (metric.CounterMetric, bool) {
+func (ms MemStorage) GetCounter(name string) (metric.CounterMetric, error) {
 	v, ok := ms[name]
 	if !ok {
-		return metric.CounterMetric{}, false
+		ErrMetricNotFound = fmt.Errorf("metric not found by name '%s'", name)
+		return metric.CounterMetric{}, ErrMetricNotFound
 	}
 
 	if v.Type() != metric.CounterType {
-		return metric.CounterMetric{}, false
+		err := fmt.Errorf("metric should be a counter type, but a '%s' was found", v.Type())
+		return metric.CounterMetric{}, err
 	}
 
 	t, _ := v.(metric.CounterMetric)
 
-	return t, true
+	return t, nil
 }
 
-func (ms MemStorage) GetGauge(name string) (metric.GaugeMetric, bool) {
+func (ms MemStorage) GetGauge(name string) (metric.GaugeMetric, error) {
 	v, ok := ms[name]
 	if !ok {
-		return metric.GaugeMetric{}, false
+		ErrMetricNotFound = fmt.Errorf("metric not found by name '%s'", name)
+		return metric.GaugeMetric{}, ErrMetricNotFound
 	}
 
 	if v.Type() != metric.GaugeType {
-		return metric.GaugeMetric{}, false
+		err := fmt.Errorf("metric should be a gauge type, but a '%s' was found", v.Type())
+		return metric.GaugeMetric{}, err
 	}
 
 	t, _ := v.(metric.GaugeMetric)
 
-	return t, true
+	return t, nil
 }
 
 func (ms MemStorage) Update(m metric.IMetric) error {
@@ -72,10 +80,14 @@ func (ms MemStorage) Update(m metric.IMetric) error {
 			return fmt.Errorf("impossible to cast to target type")
 		}
 
-		em, emOk := ms.GetCounter(m.Name())
-		if !emOk {
-			ms.Set(m)
-			return nil
+		em, emErr := ms.GetCounter(m.Name())
+		if emErr != nil {
+			if errors.Is(ErrMetricNotFound, emErr) {
+				ms.Set(m)
+				return nil
+			} else {
+				return emErr
+			}
 		}
 
 		updM, updErr := metric.NewMetric(m.Name(), m.Type(), fmt.Sprintf("%d", cm.Value()+em.Value()))

@@ -29,12 +29,16 @@ const (
 	CounterType string = "counter"
 )
 
+var (
+	ErrInvalidValue = fmt.Errorf("invalid value")
+)
+
 func NewMetric(name string, mType string, value string) (IMetric, error) {
 	switch mType {
 	case GaugeType:
 		val, err := strconv.ParseFloat(value, 64)
 		if err != nil {
-			return GaugeMetric{}, err
+			return GaugeMetric{}, ErrInvalidValue
 		}
 		return GaugeMetric{
 			name:  name,
@@ -43,7 +47,7 @@ func NewMetric(name string, mType string, value string) (IMetric, error) {
 	case CounterType:
 		val, err := strconv.ParseInt(value, 10, 64)
 		if err != nil {
-			return CounterMetric{}, err
+			return CounterMetric{}, ErrInvalidValue
 		}
 		return CounterMetric{
 			name:  name,

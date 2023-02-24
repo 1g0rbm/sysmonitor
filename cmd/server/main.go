@@ -8,7 +8,8 @@ import (
 )
 
 func main() {
-	app := application.NewApp(storage.NewStorage())
+	s := storage.NewStorage()
+	app := application.NewApp(s)
 
 	log.Fatal(app.Run())
 }

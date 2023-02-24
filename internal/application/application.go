@@ -16,22 +16,27 @@ import (
 
 const addr = ":8080"
 
-type config struct {
+type Config struct {
 	addr string
 }
 
 type App struct {
 	storage storage.Storage
 	router  *chi.Mux
-	config  config
+	config  Config
+}
+
+func NewConfig() Config {
+	return Config{
+		addr: addr,
+	}
 }
 
 func NewApp(s storage.Storage) *App {
-	app := new(App)
-	app.storage = s
-	app.router = chi.NewRouter()
-	app.config = config{
-		addr: addr,
+	app := &App{
+		storage: s,
+		config:  NewConfig(),
+		router:  chi.NewRouter(),
 	}
 
 	app.router.Use(middleware.RequestID)
@@ -56,7 +61,9 @@ func (app App) getAllMetricsHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, tErr.Error(), http.StatusInternalServerError)
 	}
 
-	if err := t.Execute(w, app.storage.All()); err != nil {
+	m := app.storage.All()
+
+	if err := t.Execute(w, m); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }

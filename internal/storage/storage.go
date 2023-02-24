@@ -18,6 +18,7 @@ type Storage interface {
 	GetGauge(name string) (metric.GaugeMetric, error)
 }
 
+// MemStorage ToDo Data Race
 type MemStorage map[string]metric.IMetric
 
 func (ms MemStorage) All() map[string]metric.IMetric {
@@ -90,7 +91,7 @@ func (ms MemStorage) Update(m metric.IMetric) error {
 			}
 		}
 
-		updM, updErr := metric.NewMetric(m.Name(), m.Type(), fmt.Sprintf("%d", cm.Value()+em.Value()))
+		updM, updErr := cm.Update(em)
 		if updErr != nil {
 			return updErr
 		}

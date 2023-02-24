@@ -82,6 +82,10 @@ func (gm GaugeMetric) NormalizeValue() (Gauge, error) {
 	return Gauge(val), nil
 }
 
+func (gm GaugeMetric) Update(ngm GaugeMetric) GaugeMetric {
+	return ngm
+}
+
 func (cm CounterMetric) Name() string {
 	return cm.name
 }
@@ -104,4 +108,13 @@ func (cm CounterMetric) NormalizeValue() (Counter, error) {
 		return 0, err
 	}
 	return Counter(val), nil
+}
+
+func (cm CounterMetric) Update(ncm CounterMetric) (IMetric, error) {
+	m, err := NewMetric(cm.Name(), cm.Type(), fmt.Sprintf("%d", cm.Value()+ncm.Value()))
+	if err != nil {
+		return nil, err
+	}
+
+	return m, nil
 }

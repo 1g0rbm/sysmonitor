@@ -11,20 +11,17 @@ type Counter int64
 type IMetric interface {
 	Name() string
 	Type() string
-	Value() []byte
 	ValueAsString() string
 }
 
 type GaugeMetric struct {
 	name  string
-	mType string
-	value []byte
+	value Gauge
 }
 
 type CounterMetric struct {
 	name  string
-	mType string
-	value []byte
+	value Counter
 }
 
 const (
@@ -32,19 +29,25 @@ const (
 	CounterType string = "counter"
 )
 
-func NewMetric(name string, mType string, value []byte) (IMetric, error) {
+func NewMetric(name string, mType string, value string) (IMetric, error) {
 	switch mType {
 	case GaugeType:
+		val, err := strconv.ParseFloat(value, 64)
+		if err != nil {
+			return GaugeMetric{}, err
+		}
 		return GaugeMetric{
 			name:  name,
-			value: value,
-			mType: mType,
+			value: Gauge(val),
 		}, nil
 	case CounterType:
+		val, err := strconv.ParseInt(value, 10, 64)
+		if err != nil {
+			return CounterMetric{}, err
+		}
 		return CounterMetric{
 			name:  name,
-			value: value,
-			mType: mType,
+			value: Counter(val),
 		}, nil
 	default:
 		return nil, fmt.Errorf("invalid type %s", mType)
@@ -56,15 +59,15 @@ func (gm GaugeMetric) Name() string {
 }
 
 func (gm GaugeMetric) Type() string {
-	return gm.mType
+	return GaugeType
 }
 
-func (gm GaugeMetric) Value() []byte {
+func (gm GaugeMetric) Value() Gauge {
 	return gm.value
 }
 
 func (gm GaugeMetric) ValueAsString() string {
-	return string(gm.value)
+	return fmt.Sprintf("%f", gm.value)
 }
 
 func (gm GaugeMetric) NormalizeValue() (Gauge, error) {
@@ -80,15 +83,15 @@ func (cm CounterMetric) Name() string {
 }
 
 func (cm CounterMetric) Type() string {
-	return cm.mType
+	return CounterType
 }
 
-func (cm CounterMetric) Value() []byte {
+func (cm CounterMetric) Value() Counter {
 	return cm.value
 }
 
 func (cm CounterMetric) ValueAsString() string {
-	return string(cm.value)
+	return fmt.Sprintf("%d", cm.value)
 }
 
 func (cm CounterMetric) NormalizeValue() (Counter, error) {

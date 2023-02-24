@@ -1,10 +1,8 @@
 package application
 
 import (
-	"fmt"
 	"html/template"
 	"net/http"
-	"regexp"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -75,19 +73,12 @@ func (app App) updateMetricHandler(w http.ResponseWriter, r *http.Request) {
 	mType := chi.URLParam(r, "Type")
 	mValue := chi.URLParam(r, "Value")
 
-	fmt.Println(mValue)
-
 	if mName == "" || mType == "" {
 		http.Error(w, "invalid path params", http.StatusBadRequest)
 		return
 	}
 
-	if ok, _ := regexp.MatchString("[0-9]+(.[0-9]+)?", mValue); !ok {
-		http.Error(w, "invalid value", http.StatusBadRequest)
-		return
-	}
-
-	m, mErr := metric.NewMetric(mName, mType, []byte(mValue))
+	m, mErr := metric.NewMetric(mName, mType, mValue)
 	if mErr != nil {
 		http.Error(w, mErr.Error(), http.StatusNotImplemented)
 		return

@@ -3,7 +3,6 @@ package storage
 import (
 	"fmt"
 	"github.com/1g0rbm/sysmonitor/internal/metric"
-	"strconv"
 )
 
 type Storage interface {
@@ -69,12 +68,7 @@ func (ms MemStorage) Update(m metric.IMetric) error {
 	case metric.CounterType:
 		cm, ok := m.(metric.CounterMetric)
 		if !ok {
-			return fmt.Errorf("impossible to cast ")
-		}
-
-		curV, curVErr := cm.NormalizeValue()
-		if curVErr != nil {
-			return curVErr
+			return fmt.Errorf("impossible to cast to target type")
 		}
 
 		em, emOk := ms.GetCounter(m.Name())
@@ -83,12 +77,7 @@ func (ms MemStorage) Update(m metric.IMetric) error {
 			return nil
 		}
 
-		emv, emvErr := em.NormalizeValue()
-		if emvErr != nil {
-			return emvErr
-		}
-
-		updM, updErr := metric.NewMetric(m.Name(), m.Type(), []byte(strconv.FormatInt(int64(curV+emv), 10)))
+		updM, updErr := metric.NewMetric(m.Name(), m.Type(), fmt.Sprintf("%d", cm.Value()+em.Value()))
 		if updErr != nil {
 			return updErr
 		}

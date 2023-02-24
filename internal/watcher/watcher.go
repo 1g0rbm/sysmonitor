@@ -20,12 +20,6 @@ const (
 	requestTimeout        = 5 * time.Second
 )
 
-type cMetric struct {
-	name  string
-	mType string
-	value string
-}
-
 type gMetrics map[string]metric.Gauge
 
 func (gm gMetrics) update(m runtime.MemStats) {
@@ -68,14 +62,6 @@ func (cm cMetrics) update() {
 type Watcher struct {
 	cm cMetrics
 	gm gMetrics
-}
-
-func newCommonMetric(name string, mType string, value string) cMetric {
-	return cMetric{
-		name:  name,
-		mType: mType,
-		value: value,
-	}
 }
 
 func NewWatcher() Watcher {
@@ -121,15 +107,17 @@ func (w Watcher) update(rms runtime.MemStats) {
 	w.gm.update(rms)
 }
 
-func (w Watcher) getAll() []cMetric {
-	var all []cMetric
+func (w Watcher) getAll() []metric.IMetric {
+	var all []metric.IMetric
 
 	for name, value := range w.gm {
-		all = append(all, newCommonMetric(name, metric.GaugeType, fmt.Sprintf("%f", value)))
+		m, _ := metric.NewMetric(name, metric.GaugeType, fmt.Sprintf("%f", value))
+		all = append(all, m)
 	}
 
 	for name, value := range w.cm {
-		all = append(all, newCommonMetric(name, metric.CounterType, fmt.Sprintf("%d", value)))
+		m, _ := metric.NewMetric(name, metric.CounterType, fmt.Sprintf("%d", value))
+		all = append(all, m)
 	}
 
 	return all
@@ -161,13 +149,13 @@ func (w Watcher) Run(updMetricsDuration int, sendMetricsDuration int) error {
 			w.update(rms)
 		case <-sendMetricsTicker.C:
 			for _, m := range w.getAll() {
-				updURL.Path = fmt.Sprintf("/update/%s/%v/%s", m.mType, m.name, m.value)
+				updURL.Path = fmt.Sprintf("/update/%s/%v/%s", m.Type(), m.Name(), m.ValueAsString())
 				err := sendMetrics(updURL.String())
 				if err != nil {
 					fmt.Println(err)
 					continue
 				}
-				fmt.Printf("Metric %s was sent successfull\n", m.name)
+				fmt.Printf("Metric %s was sent successfull\n", m.Name())
 			}
 		}
 	}

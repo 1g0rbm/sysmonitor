@@ -135,6 +135,16 @@ func Test_getOneHandler(t *testing.T) {
 			},
 		},
 		{
+			name:   "success get gauge metric value test",
+			path:   "/value/gauge/Heap",
+			method: http.MethodGet,
+			want: want{
+				contentType: "text/plain",
+				statusCode:  http.StatusOK,
+				content:     "96969.519",
+			},
+		},
+		{
 			name:   "success get counter metric value test",
 			path:   "/value/counter/PollCounter",
 			method: http.MethodGet,
@@ -173,6 +183,7 @@ func Test_getOneHandler(t *testing.T) {
 			defer ts.Close()
 
 			testRequestAndCloseBody(t, ts, "POST", "/update/gauge/HeapReleased/2621440.000000")
+			testRequestAndCloseBody(t, ts, "POST", "/update/gauge/Heap/96969.519")
 			testRequestAndCloseBody(t, ts, "POST", "/update/counter/PollCounter/5")
 
 			resp, body := testRequest(t, ts, tt.method, tt.path)

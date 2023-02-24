@@ -3,6 +3,7 @@ package metric
 import (
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 type Gauge float64
@@ -71,7 +72,7 @@ func (gm GaugeMetric) Value() Gauge {
 }
 
 func (gm GaugeMetric) ValueAsString() string {
-	return fmt.Sprintf("%f", gm.value)
+	return strings.TrimRight(strings.TrimRight(fmt.Sprintf("%f", gm.value), "0"), ".")
 }
 
 func (gm GaugeMetric) NormalizeValue() (Gauge, error) {

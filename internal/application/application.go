@@ -1,8 +1,11 @@
 package application
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"html/template"
+	"log"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -46,6 +49,8 @@ func NewApp(s storage.Storage) *App {
 	app.router.Post("/update/{Type}/{Name}/{Value}", app.updateMetricHandler)
 	app.router.Get("/value/{Type}/{Name}", app.getMetricHandler)
 
+	app.router.Post("/update/", app.updateJsonMetricHandler)
+
 	return app
 }
 
@@ -64,6 +69,34 @@ func (app App) getAllMetricsHandler(w http.ResponseWriter, r *http.Request) {
 	if err := t.Execute(w, m); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+func (app App) updateJsonMetricHandler(w http.ResponseWriter, r *http.Request) {
+	var m metric.Metrics
+
+	if err := json.NewDecoder(r.Body).Decode(&m); err != nil {
+		sendJsonResponse(w, http.StatusBadRequest, []byte("invalid metric structure"))
+		return
+	}
+
+	if m.MType != metric.GaugeType && m.MType != metric.CounterType {
+		sendJsonResponse(w, http.StatusBadRequest, []byte("invalid metric type"))
+		return
+	}
+
+	updM, updErr := app.storage.Update(m)
+	if updErr != nil {
+		sendJsonResponse(w, http.StatusInternalServerError, []byte("update error"))
+		return
+	}
+
+	b, err := json.Marshal(updM)
+	if err != nil {
+		sendJsonResponse(w, http.StatusInternalServerError, []byte("error while response creation"))
+		return
+	}
+
+	sendJsonResponse(w, http.StatusOK, b)
 }
 
 func (app App) updateMetricHandler(w http.ResponseWriter, r *http.Request) {
@@ -88,7 +121,7 @@ func (app App) updateMetricHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updErr := app.storage.Update(m)
+	_, updErr := app.storage.Update(m)
 	if updErr != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 	}
@@ -120,4 +153,12 @@ func (app App) getMetricHandler(w http.ResponseWriter, r *http.Request) {
 
 func (app App) getRouter() chi.Router {
 	return app.router
+}
+
+func sendJsonResponse(w http.ResponseWriter, status int, body []byte) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	if _, err := w.Write(body); err != nil {
+		log.Fatal(fmt.Sprintf("Error while sending response: %s", err))
+	}
 }

@@ -13,7 +13,7 @@ type Storage interface {
 	Set(m metric.IMetric)
 	Get(name string) (metric.IMetric, error)
 	All() map[string]metric.IMetric
-	Update(m metric.IMetric) error
+	Update(m metric.IMetric) (metric.IMetric, error)
 	GetCounter(name string) (metric.CounterMetric, error)
 	GetGauge(name string) (metric.GaugeMetric, error)
 }
@@ -73,35 +73,30 @@ func (ms MemStorage) GetGauge(name string) (metric.GaugeMetric, error) {
 	return t, nil
 }
 
-func (ms MemStorage) Update(m metric.IMetric) error {
+func (ms MemStorage) Update(m metric.IMetric) (metric.IMetric, error) {
 	switch m.Type() {
 	case metric.CounterType:
-		cm, ok := m.(metric.CounterMetric)
-		if !ok {
-			return fmt.Errorf("impossible to cast to target type")
-		}
-
 		em, emErr := ms.GetCounter(m.Name())
 		if errors.Is(ErrMetricNotFound, emErr) {
 			ms.Set(m)
-			return nil
+			return m, nil
 		}
 		if emErr != nil {
-			return emErr
+			return nil, emErr
 		}
 
-		updM, updErr := cm.Update(em)
+		updM, updErr := m.Update(em)
 		if updErr != nil {
-			return updErr
+			return nil, updErr
 		}
 
 		ms.Set(updM)
-		return nil
+		return updM, nil
 	case metric.GaugeType:
 		ms.Set(m)
-		return nil
+		return m, nil
 	default:
-		return fmt.Errorf("undefined metric type '%s'", m.Type())
+		return nil, fmt.Errorf("undefined metric type '%s'", m.Type())
 	}
 }
 

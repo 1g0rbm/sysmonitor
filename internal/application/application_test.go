@@ -1,6 +1,9 @@
 package application
 
 import (
+	"bytes"
+	"encoding/json"
+	"github.com/1g0rbm/sysmonitor/internal/metric"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -11,6 +14,69 @@ import (
 
 	"github.com/1g0rbm/sysmonitor/internal/storage"
 )
+
+func Test_updateJsonHandler(t *testing.T) {
+	type want struct {
+		contentType string
+		statusCode  int
+		content     string
+	}
+	fVal := 2.01
+	iVal := int64(5)
+	tests := []struct {
+		name   string
+		path   string
+		method string
+		metric metric.Metrics
+		want   want
+	}{
+		{
+			name:   "success update gauge metric test",
+			path:   "/update/",
+			method: http.MethodPost,
+			metric: metric.Metrics{
+				ID:    "Alloc",
+				MType: metric.GaugeType,
+				Value: &fVal,
+			},
+			want: want{
+				contentType: "application/json",
+				statusCode:  http.StatusOK,
+				content:     `{"id":"Alloc","type":"gauge","value":2.01}`,
+			},
+		},
+		{
+			name:   "success update counter metric test",
+			path:   "/update/",
+			method: http.MethodPost,
+			metric: metric.Metrics{
+				ID:    "PollCounter",
+				MType: metric.CounterType,
+				Delta: &iVal,
+			},
+			want: want{
+				contentType: "application/json",
+				statusCode:  http.StatusOK,
+				content:     `{"id":"PollCounter","type":"counter","delta":5}`,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			app := NewApp(storage.NewStorage())
+
+			ts := httptest.NewServer(app.getRouter())
+			defer ts.Close()
+
+			resp, body := testJsonRequest(t, ts, tt.method, tt.path, tt.metric)
+			defer resp.Body.Close()
+
+			assert.Equal(t, tt.want.statusCode, resp.StatusCode)
+			assert.Equal(t, tt.want.contentType, resp.Header.Get("Content-Type"))
+			assert.Equal(t, tt.want.content, body)
+		})
+	}
+}
 
 func Test_updateHandler(t *testing.T) {
 	type want struct {
@@ -255,6 +321,30 @@ func Test_getAllHandler(t *testing.T) {
 			assert.Equal(t, tt.want.content, body)
 		})
 	}
+}
+
+func testJsonRequest(
+	t *testing.T,
+	ts *httptest.Server,
+	method,
+	path string,
+	m metric.Metrics,
+) (*http.Response, string) {
+	b, _ := json.Marshal(m)
+	buf := bytes.NewBuffer(b)
+
+	req, err := http.NewRequest(method, ts.URL+path, buf)
+	require.NoError(t, err)
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+
+	respBody, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+
+	defer resp.Body.Close()
+
+	return resp, string(respBody)
 }
 
 func testRequest(t *testing.T, ts *httptest.Server, method, path string) (*http.Response, string) {

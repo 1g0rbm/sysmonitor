@@ -14,6 +14,9 @@ type IMetric interface {
 	Name() string
 	Type() string
 	ValueAsString() string
+	Gauge() *Gauge
+	Counter() *Counter
+	Update(m IMetric) (IMetric, error)
 }
 
 type GaugeMetric struct {
@@ -26,6 +29,13 @@ type CounterMetric struct {
 	value Counter
 }
 
+type Metrics struct {
+	ID    string   `json:"id"`
+	MType string   `json:"type"`
+	Delta *int64   `json:"delta,omitempty"`
+	Value *float64 `json:"value,omitempty"`
+}
+
 const (
 	GaugeType   string = "gauge"
 	CounterType string = "counter"
@@ -34,6 +44,75 @@ const (
 var (
 	ErrInvalidValue = fmt.Errorf("invalid value")
 )
+
+func NewMetrics(id string, mType string, delta *int64, value *float64) IMetric {
+	return Metrics{
+		ID:    id,
+		MType: mType,
+		Delta: delta,
+		Value: value,
+	}
+}
+
+func (m Metrics) Name() string {
+	return m.ID
+}
+
+func (m Metrics) Type() string {
+	return m.MType
+}
+
+func (m Metrics) ValueAsString() string {
+	switch m.MType {
+	case GaugeType:
+		f := *m.Value - math.Floor(*m.Value)
+		str := fmt.Sprintf("%f", *m.Value)
+		if f > 0 {
+			return strings.TrimRight(str, "0")
+		}
+		return str
+	case CounterType:
+		return fmt.Sprintf("%d", *m.Delta)
+	default:
+		return ""
+	}
+}
+
+func (m Metrics) Gauge() *Gauge {
+	if m.Value == nil {
+		return nil
+	}
+
+	res := Gauge(*m.Value)
+
+	return &res
+}
+
+func (m Metrics) Counter() *Counter {
+	if m.Delta == nil {
+		return nil
+	}
+
+	res := Counter(*m.Delta)
+
+	return &res
+}
+
+func (m Metrics) Update(nm IMetric) (IMetric, error) {
+	if m.Type() != nm.Type() {
+		return nil, fmt.Errorf("invalid tytpe")
+	}
+
+	switch m.Type() {
+	case GaugeType:
+		return nm, nil
+	case CounterType:
+		upd := *m.Delta + int64(*nm.Counter())
+		return NewMetrics(nm.Name(), nm.Type(), &upd, nil), nil
+	default:
+		return nil, fmt.Errorf("undefined tytpe")
+	}
+}
 
 func NewMetric(name string, mType string, value string) (IMetric, error) {
 	switch mType {
@@ -90,8 +169,16 @@ func (gm GaugeMetric) NormalizeValue() (Gauge, error) {
 	return Gauge(val), nil
 }
 
-func (gm GaugeMetric) Update(ngm GaugeMetric) GaugeMetric {
-	return ngm
+func (gm GaugeMetric) Update(ngm IMetric) (IMetric, error) {
+	return ngm, nil
+}
+
+func (gm GaugeMetric) Gauge() *Gauge {
+	return &gm.value
+}
+
+func (gm GaugeMetric) Counter() *Counter {
+	return nil
 }
 
 func (cm CounterMetric) Name() string {
@@ -118,8 +205,8 @@ func (cm CounterMetric) NormalizeValue() (Counter, error) {
 	return Counter(val), nil
 }
 
-func (cm CounterMetric) Update(ncm CounterMetric) (IMetric, error) {
-	nv := cm.Value() + ncm.Value()
+func (cm CounterMetric) Update(ncm IMetric) (IMetric, error) {
+	nv := cm.Value() + *ncm.Counter()
 	snv := fmt.Sprintf("%d", nv)
 
 	m, err := NewMetric(cm.Name(), cm.Type(), snv)
@@ -128,4 +215,12 @@ func (cm CounterMetric) Update(ncm CounterMetric) (IMetric, error) {
 	}
 
 	return m, nil
+}
+
+func (cm CounterMetric) Gauge() *Gauge {
+	return nil
+}
+
+func (cm CounterMetric) Counter() *Counter {
+	return &cm.value
 }

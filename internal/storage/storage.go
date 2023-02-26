@@ -94,7 +94,7 @@ func (ms MemStorage) Update(m metric.IMetric) (metric.IMetric, error) {
 	switch m.Type() {
 	case metric.CounterType:
 		em, emErr := ms.Get(m.Name())
-		if errors.Is(ErrMetricNotFound, emErr) {
+		if emErr != nil && errors.Is(ErrMetricNotFound, emErr) {
 			ms.Set(m)
 			return m, nil
 		}

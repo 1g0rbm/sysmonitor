@@ -58,7 +58,7 @@ func (gm gMetrics) update(m runtime.MemStats) {
 type cMetrics map[string]metric.Counter
 
 func (cm cMetrics) update() {
-	cm["PollCounter"] += 1
+	cm["PollCount"] += 1
 }
 
 type Watcher struct {
@@ -99,7 +99,7 @@ func NewWatcher() Watcher {
 			"RandomValue":   0,
 		},
 		cm: cMetrics{
-			"PollCounter": 0,
+			"PollCount": 0,
 		},
 	}
 }
@@ -186,7 +186,7 @@ func sendMetrics(url string, m metric.IMetric) error {
 
 	response, rErr := client.Do(request.WithContext(ctx))
 	if rErr != nil {
-		fmt.Println(err)
+		return rErr
 	}
 
 	if response.StatusCode != http.StatusOK {

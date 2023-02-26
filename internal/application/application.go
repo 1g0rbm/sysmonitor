@@ -85,6 +85,11 @@ func (app App) updateJsonMetricHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if m.Delta == nil && m.Value == nil {
+		sendJsonResponse(w, http.StatusBadRequest, []byte("invalid metric value"))
+		return
+	}
+
 	updM, updErr := app.storage.Update(m)
 	if updErr != nil {
 		sendJsonResponse(w, http.StatusInternalServerError, []byte("update error"))

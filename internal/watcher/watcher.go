@@ -114,13 +114,13 @@ func (w Watcher) getAll() []metric.IMetric {
 
 	for name, value := range w.gm {
 		v := float64(value)
-		m := metric.NewMetrics(name, metric.GaugeType, nil, &v)
+		m, _ := metric.NewMetrics(name, metric.GaugeType, nil, &v)
 		all = append(all, m)
 	}
 
 	for name, value := range w.cm {
 		v := int64(value)
-		m := metric.NewMetrics(name, metric.CounterType, &v, nil)
+		m, _ := metric.NewMetrics(name, metric.CounterType, &v, nil)
 		all = append(all, m)
 	}
 

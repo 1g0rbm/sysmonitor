@@ -45,13 +45,19 @@ var (
 	ErrInvalidValue = fmt.Errorf("invalid value")
 )
 
-func NewMetrics(id string, mType string, delta *int64, value *float64) IMetric {
+func NewMetrics(id string, mType string, delta *int64, value *float64) (IMetric, error) {
+	if mType == CounterType && delta == nil {
+		return nil, fmt.Errorf("delata can not be nil for a counter type")
+	} else if mType == GaugeType && value == nil {
+		return nil, fmt.Errorf("value can not be nil for a gauge type")
+	}
+
 	return Metrics{
 		ID:    id,
 		MType: mType,
 		Delta: delta,
 		Value: value,
-	}
+	}, nil
 }
 
 func (m Metrics) Name() string {
@@ -107,8 +113,12 @@ func (m Metrics) Update(nm IMetric) (IMetric, error) {
 	case GaugeType:
 		return nm, nil
 	case CounterType:
-		upd := *m.Delta + int64(*nm.Counter())
-		return NewMetrics(nm.Name(), nm.Type(), &upd, nil), nil
+		updV := *m.Delta + int64(*nm.Counter())
+		updM, err := NewMetrics(nm.Name(), nm.Type(), &updV, nil)
+		if err != nil {
+			return nil, err
+		}
+		return updM, nil
 	default:
 		return nil, fmt.Errorf("undefined tytpe")
 	}

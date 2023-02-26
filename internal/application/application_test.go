@@ -60,6 +60,20 @@ func Test_updateJsonHandler(t *testing.T) {
 				content:     `{"id":"PollCounter","type":"counter","delta":5}`,
 			},
 		},
+		{
+			name:   "invalid value update counter metric test",
+			path:   "/update/",
+			method: http.MethodPost,
+			metric: metric.Metrics{
+				ID:    "PollCounter",
+				MType: metric.CounterType,
+			},
+			want: want{
+				contentType: "application/json",
+				statusCode:  http.StatusBadRequest,
+				content:     "invalid metric value",
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

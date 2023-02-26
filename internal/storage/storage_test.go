@@ -11,8 +11,8 @@ import (
 func TestRun(t *testing.T) {
 	f := 2621440.000000
 	i := int64(10)
-	m1 := metric.NewMetrics("GCSys", "gauge", nil, &f)
-	m2 := metric.NewMetrics("PollCounter", "counter", &i, nil)
+	m1, _ := metric.NewMetrics("GCSys", "gauge", nil, &f)
+	m2, _ := metric.NewMetrics("PollCounter", "counter", &i, nil)
 
 	tests := []struct {
 		name string

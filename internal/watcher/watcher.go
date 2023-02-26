@@ -1,7 +1,9 @@
 package watcher
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -111,12 +113,14 @@ func (w Watcher) getAll() []metric.IMetric {
 	var all []metric.IMetric
 
 	for name, value := range w.gm {
-		m, _ := metric.NewMetric(name, metric.GaugeType, fmt.Sprintf("%f", value))
+		v := float64(value)
+		m := metric.NewMetrics(name, metric.GaugeType, nil, &v)
 		all = append(all, m)
 	}
 
 	for name, value := range w.cm {
-		m, _ := metric.NewMetric(name, metric.CounterType, fmt.Sprintf("%d", value))
+		v := int64(value)
+		m := metric.NewMetrics(name, metric.CounterType, &v, nil)
 		all = append(all, m)
 	}
 
@@ -149,8 +153,8 @@ func (w Watcher) Run(updMetricsDuration int, sendMetricsDuration int) error {
 			w.update(rms)
 		case <-sendMetricsTicker.C:
 			for _, m := range w.getAll() {
-				updURL.Path = fmt.Sprintf("/update/%s/%v/%s", m.Type(), m.Name(), m.ValueAsString())
-				err := sendMetrics(updURL.String())
+				updURL.Path = "/update/"
+				err := sendMetrics(updURL.String(), m)
 				if err != nil {
 					fmt.Println(err)
 					continue
@@ -161,7 +165,7 @@ func (w Watcher) Run(updMetricsDuration int, sendMetricsDuration int) error {
 	}
 }
 
-func sendMetrics(url string) error {
+func sendMetrics(url string, m metric.IMetric) error {
 	client := &http.Client{
 		Timeout: clientTimeout,
 	}
@@ -169,11 +173,16 @@ func sendMetrics(url string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
 	defer cancel()
 
-	request, err := http.NewRequest("POST", url, nil)
+	b, mErr := json.Marshal(m)
+	if mErr != nil {
+		return mErr
+	}
+
+	request, err := http.NewRequest("POST", url, bytes.NewBuffer(b))
 	if err != nil {
 		return err
 	}
-	request.Header.Add("Content-Type", "text/plain")
+	request.Header.Add("Content-Type", "application/json")
 
 	response, rErr := client.Do(request.WithContext(ctx))
 	if rErr != nil {

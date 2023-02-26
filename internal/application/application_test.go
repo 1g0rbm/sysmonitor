@@ -78,6 +78,94 @@ func Test_updateJsonHandler(t *testing.T) {
 	}
 }
 
+func Test_getOneJsonHandler(t *testing.T) {
+	type want struct {
+		contentType string
+		statusCode  int
+		content     string
+	}
+	tests := []struct {
+		name   string
+		path   string
+		method string
+		metric metric.Metrics
+		want   want
+	}{
+		{
+			name:   "success get gauge metric test",
+			path:   "/value/",
+			method: http.MethodPost,
+			metric: metric.Metrics{
+				ID:    "Alloc",
+				MType: metric.GaugeType,
+			},
+			want: want{
+				contentType: "application/json",
+				statusCode:  http.StatusOK,
+				content:     `{"id":"Alloc","type":"gauge","value":2.01}`,
+			},
+		},
+		{
+			name:   "success get counter metric test",
+			path:   "/value/",
+			method: http.MethodPost,
+			metric: metric.Metrics{
+				ID:    "PollCounter",
+				MType: metric.CounterType,
+			},
+			want: want{
+				contentType: "application/json",
+				statusCode:  http.StatusOK,
+				content:     `{"id":"PollCounter","type":"counter","delta":5}`,
+			},
+		},
+		{
+			name:   "get unknown metric test",
+			path:   "/value/",
+			method: http.MethodPost,
+			metric: metric.Metrics{
+				ID:    "UnknownCounter",
+				MType: metric.CounterType,
+			},
+			want: want{
+				contentType: "application/json",
+				statusCode:  http.StatusNotFound,
+				content:     "metric not found by name 'UnknownCounter'",
+			},
+		},
+	}
+	for _, tt := range tests {
+		fVal := 2.01
+		iVal := int64(5)
+		m1 := metric.Metrics{
+			ID:    "Alloc",
+			MType: metric.GaugeType,
+			Value: &fVal,
+		}
+		m2 := metric.Metrics{
+			ID:    "PollCounter",
+			MType: metric.CounterType,
+			Delta: &iVal,
+		}
+		t.Run(tt.name, func(t *testing.T) {
+			s := storage.NewStorage()
+			s.Set(m1)
+			s.Set(m2)
+			app := NewApp(s)
+
+			ts := httptest.NewServer(app.getRouter())
+			defer ts.Close()
+
+			resp, body := testJsonRequest(t, ts, tt.method, tt.path, tt.metric)
+			defer resp.Body.Close()
+
+			assert.Equal(t, tt.want.statusCode, resp.StatusCode)
+			assert.Equal(t, tt.want.contentType, resp.Header.Get("Content-Type"))
+			assert.Equal(t, tt.want.content, body)
+		})
+	}
+}
+
 func Test_updateHandler(t *testing.T) {
 	type want struct {
 		contentType string

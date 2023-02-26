@@ -50,6 +50,7 @@ func NewApp(s storage.Storage) *App {
 	app.router.Get("/value/{Type}/{Name}", app.getMetricHandler)
 
 	app.router.Post("/update/", app.updateJsonMetricHandler)
+	app.router.Post("/value/", app.getJsonMetricHandler)
 
 	return app
 }
@@ -93,6 +94,40 @@ func (app App) updateJsonMetricHandler(w http.ResponseWriter, r *http.Request) {
 	b, err := json.Marshal(updM)
 	if err != nil {
 		sendJsonResponse(w, http.StatusInternalServerError, []byte("error while response creation"))
+		return
+	}
+
+	sendJsonResponse(w, http.StatusOK, b)
+}
+
+func (app App) getJsonMetricHandler(w http.ResponseWriter, r *http.Request) {
+	var rm metric.Metrics
+
+	if err := json.NewDecoder(r.Body).Decode(&rm); err != nil {
+		sendJsonResponse(w, http.StatusBadRequest, []byte("invalid metric structure"))
+		return
+	}
+
+	if rm.MType != metric.GaugeType && rm.MType != metric.CounterType {
+		sendJsonResponse(w, http.StatusBadRequest, []byte("invalid metric type"))
+		return
+	}
+
+	m, err := app.storage.Get(rm.Name())
+	if err != nil && errors.Is(storage.ErrMetricNotFound, err) {
+		sendJsonResponse(w, http.StatusNotFound, []byte(err.Error()))
+		return
+	}
+	if err != nil {
+		sendJsonResponse(w, http.StatusInternalServerError, []byte("internal server error"))
+		log.Fatalf("Error during getting metric from storage: %s", err)
+		return
+	}
+
+	b, mErr := json.Marshal(m)
+	if mErr != nil {
+		sendJsonResponse(w, http.StatusInternalServerError, []byte("internal server error"))
+		log.Fatalf("Metric marshaling error: %s", mErr)
 		return
 	}
 

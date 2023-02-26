@@ -36,7 +36,24 @@ func (ms MemStorage) Get(name string) (metric.IMetric, error) {
 		return nil, ErrMetricNotFound
 	}
 
-	return v, nil
+	var g *float64
+	if v.Gauge() != nil {
+		b := float64(*v.Gauge())
+		g = &b
+	}
+
+	var d *int64
+	if v.Counter() != nil {
+		b := int64(*v.Counter())
+		d = &b
+	}
+
+	return metric.Metrics{
+		ID:    v.Name(),
+		MType: v.Type(),
+		Value: g,
+		Delta: d,
+	}, nil
 }
 
 func (ms MemStorage) GetCounter(name string) (metric.CounterMetric, error) {
@@ -76,7 +93,7 @@ func (ms MemStorage) GetGauge(name string) (metric.GaugeMetric, error) {
 func (ms MemStorage) Update(m metric.IMetric) (metric.IMetric, error) {
 	switch m.Type() {
 	case metric.CounterType:
-		em, emErr := ms.GetCounter(m.Name())
+		em, emErr := ms.Get(m.Name())
 		if errors.Is(ErrMetricNotFound, emErr) {
 			ms.Set(m)
 			return m, nil

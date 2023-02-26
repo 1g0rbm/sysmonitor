@@ -9,8 +9,10 @@ import (
 )
 
 func TestRun(t *testing.T) {
-	m1, _ := metric.NewMetric("GCSys", "gauge", "2621440.000000")
-	m2, _ := metric.NewMetric("PollCounter", "counter", "10")
+	f := 2621440.000000
+	i := int64(10)
+	m1 := metric.NewMetrics("GCSys", "gauge", nil, &f)
+	m2 := metric.NewMetrics("PollCounter", "counter", &i, nil)
 
 	tests := []struct {
 		name string

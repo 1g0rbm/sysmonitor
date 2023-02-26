@@ -3,7 +3,6 @@ package application
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"html/template"
 	"log"
 	"net/http"
@@ -49,8 +48,8 @@ func NewApp(s storage.Storage) *App {
 	app.router.Post("/update/{Type}/{Name}/{Value}", app.updateMetricHandler)
 	app.router.Get("/value/{Type}/{Name}", app.getMetricHandler)
 
-	app.router.Post("/update/", app.updateJsonMetricHandler)
-	app.router.Post("/value/", app.getJsonMetricHandler)
+	app.router.Post("/update/", app.updateJSONMetricHandler)
+	app.router.Post("/value/", app.getJSONMetricHandler)
 
 	return app
 }
@@ -72,71 +71,71 @@ func (app App) getAllMetricsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (app App) updateJsonMetricHandler(w http.ResponseWriter, r *http.Request) {
+func (app App) updateJSONMetricHandler(w http.ResponseWriter, r *http.Request) {
 	var m metric.Metrics
 
 	if err := json.NewDecoder(r.Body).Decode(&m); err != nil {
-		sendJsonResponse(w, http.StatusBadRequest, []byte("invalid metric structure"))
+		sendJSONResponse(w, http.StatusBadRequest, []byte("invalid metric structure"))
 		return
 	}
 
 	if m.MType != metric.GaugeType && m.MType != metric.CounterType {
-		sendJsonResponse(w, http.StatusBadRequest, []byte("invalid metric type"))
+		sendJSONResponse(w, http.StatusBadRequest, []byte("invalid metric type"))
 		return
 	}
 
 	if m.Delta == nil && m.Value == nil {
-		sendJsonResponse(w, http.StatusBadRequest, []byte("invalid metric value"))
+		sendJSONResponse(w, http.StatusBadRequest, []byte("invalid metric value"))
 		return
 	}
 
 	updM, updErr := app.storage.Update(m)
 	if updErr != nil {
-		sendJsonResponse(w, http.StatusInternalServerError, []byte("update error"))
+		sendJSONResponse(w, http.StatusInternalServerError, []byte("update error"))
 		return
 	}
 
 	b, err := json.Marshal(updM)
 	if err != nil {
-		sendJsonResponse(w, http.StatusInternalServerError, []byte("error while response creation"))
+		sendJSONResponse(w, http.StatusInternalServerError, []byte("error while response creation"))
 		return
 	}
 
-	sendJsonResponse(w, http.StatusOK, b)
+	sendJSONResponse(w, http.StatusOK, b)
 }
 
-func (app App) getJsonMetricHandler(w http.ResponseWriter, r *http.Request) {
+func (app App) getJSONMetricHandler(w http.ResponseWriter, r *http.Request) {
 	var rm metric.Metrics
 
 	if err := json.NewDecoder(r.Body).Decode(&rm); err != nil {
-		sendJsonResponse(w, http.StatusBadRequest, []byte("invalid metric structure"))
+		sendJSONResponse(w, http.StatusBadRequest, []byte("invalid metric structure"))
 		return
 	}
 
 	if rm.MType != metric.GaugeType && rm.MType != metric.CounterType {
-		sendJsonResponse(w, http.StatusBadRequest, []byte("invalid metric type"))
+		sendJSONResponse(w, http.StatusBadRequest, []byte("invalid metric type"))
 		return
 	}
 
 	m, err := app.storage.Get(rm.Name())
 	if err != nil && errors.Is(storage.ErrMetricNotFound, err) {
-		sendJsonResponse(w, http.StatusNotFound, []byte(err.Error()))
+		sendJSONResponse(w, http.StatusNotFound, []byte(err.Error()))
 		return
 	}
 	if err != nil {
-		sendJsonResponse(w, http.StatusInternalServerError, []byte("internal server error"))
+		sendJSONResponse(w, http.StatusInternalServerError, []byte("internal server error"))
 		log.Fatalf("Error during getting metric from storage: %s", err)
 		return
 	}
 
 	b, mErr := json.Marshal(m)
 	if mErr != nil {
-		sendJsonResponse(w, http.StatusInternalServerError, []byte("internal server error"))
+		sendJSONResponse(w, http.StatusInternalServerError, []byte("internal server error"))
 		log.Fatalf("Metric marshaling error: %s", mErr)
 		return
 	}
 
-	sendJsonResponse(w, http.StatusOK, b)
+	sendJSONResponse(w, http.StatusOK, b)
 }
 
 func (app App) updateMetricHandler(w http.ResponseWriter, r *http.Request) {
@@ -195,10 +194,10 @@ func (app App) getRouter() chi.Router {
 	return app.router
 }
 
-func sendJsonResponse(w http.ResponseWriter, status int, body []byte) {
+func sendJSONResponse(w http.ResponseWriter, status int, body []byte) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if _, err := w.Write(body); err != nil {
-		log.Fatal(fmt.Sprintf("Error while sending response: %s", err))
+		log.Fatalf("Error while sending response: %s", err)
 	}
 }

@@ -82,7 +82,7 @@ func Test_updateJsonHandler(t *testing.T) {
 			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()
 
-			resp, body := testJsonRequest(t, ts, tt.method, tt.path, tt.metric)
+			resp, body := testJSONRequest(t, ts, tt.method, tt.path, tt.metric)
 			defer resp.Body.Close()
 
 			assert.Equal(t, tt.want.statusCode, resp.StatusCode)
@@ -170,7 +170,7 @@ func Test_getOneJsonHandler(t *testing.T) {
 			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()
 
-			resp, body := testJsonRequest(t, ts, tt.method, tt.path, tt.metric)
+			resp, body := testJSONRequest(t, ts, tt.method, tt.path, tt.metric)
 			defer resp.Body.Close()
 
 			assert.Equal(t, tt.want.statusCode, resp.StatusCode)
@@ -425,7 +425,7 @@ func Test_getAllHandler(t *testing.T) {
 	}
 }
 
-func testJsonRequest(
+func testJSONRequest(
 	t *testing.T,
 	ts *httptest.Server,
 	method,

@@ -3,6 +3,7 @@ package application
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/1g0rbm/sysmonitor/internal/config"
 	"github.com/1g0rbm/sysmonitor/internal/metric"
 	"io"
 	"net/http"
@@ -77,7 +78,7 @@ func Test_updateJsonHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			app := NewApp(storage.NewStorage())
+			app := NewApp(storage.NewStorage(), config.GetConfigServer())
 
 			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()
@@ -165,7 +166,7 @@ func Test_getOneJsonHandler(t *testing.T) {
 			s := storage.NewStorage()
 			s.Set(m1)
 			s.Set(m2)
-			app := NewApp(s)
+			app := NewApp(s, config.GetConfigServer())
 
 			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()
@@ -255,7 +256,7 @@ func Test_updateHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			app := NewApp(storage.NewStorage())
+			app := NewApp(storage.NewStorage(), config.GetConfigServer())
 
 			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()
@@ -345,7 +346,7 @@ func Test_getOneHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			app := NewApp(storage.NewStorage())
+			app := NewApp(storage.NewStorage(), config.GetConfigServer())
 
 			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()
@@ -407,7 +408,7 @@ func Test_getAllHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			app := NewApp(storage.NewStorage())
+			app := NewApp(storage.NewStorage(), config.GetConfigServer())
 
 			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()

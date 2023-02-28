@@ -10,32 +10,21 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
+	"github.com/1g0rbm/sysmonitor/internal/config"
 	"github.com/1g0rbm/sysmonitor/internal/metric"
 	"github.com/1g0rbm/sysmonitor/internal/storage"
 )
 
-const addr = ":8080"
-
-type Config struct {
-	addr string
-}
-
 type App struct {
 	storage storage.Storage
 	router  *chi.Mux
-	config  Config
+	config  config.ServerConfig
 }
 
-func NewConfig() Config {
-	return Config{
-		addr: addr,
-	}
-}
-
-func NewApp(s storage.Storage) *App {
+func NewApp(s storage.Storage, cfg config.ServerConfig) *App {
 	app := &App{
 		storage: s,
-		config:  NewConfig(),
+		config:  cfg,
 		router:  chi.NewRouter(),
 	}
 
@@ -55,7 +44,7 @@ func NewApp(s storage.Storage) *App {
 }
 
 func (app App) Run() error {
-	return http.ListenAndServe(app.config.addr, app.router)
+	return http.ListenAndServe(app.config.Address, app.router)
 }
 
 func (app App) getAllMetricsHandler(w http.ResponseWriter, r *http.Request) {

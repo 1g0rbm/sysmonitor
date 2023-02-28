@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/1g0rbm/sysmonitor/internal/config"
 	"log"
 
 	"github.com/1g0rbm/sysmonitor/internal/application"
@@ -8,8 +9,9 @@ import (
 )
 
 func main() {
+	cfg := config.GetConfigServer()
 	s := storage.NewStorage()
-	app := application.NewApp(s)
+	app := application.NewApp(s, cfg)
 
 	log.Fatal(app.Run())
 }

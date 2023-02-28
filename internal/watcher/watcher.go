@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/1g0rbm/sysmonitor/internal/config"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -17,7 +18,6 @@ import (
 
 const (
 	scheme         string = "http"
-	host           string = "localhost:8080"
 	clientTimeout         = 10 * time.Second
 	requestTimeout        = 5 * time.Second
 )
@@ -127,21 +127,21 @@ func (w Watcher) getAll() []metric.IMetric {
 	return all
 }
 
-func (w Watcher) Run(updMetricsDuration int, sendMetricsDuration int) error {
-	if updMetricsDuration >= sendMetricsDuration {
+func (w Watcher) Run(cfg config.AgentConfig) error {
+	if cfg.PollInterval >= cfg.ReportInterval {
 		errMsg := fmt.Sprintf(
 			"update duration (%d) should be less than send duration (%d)",
-			updMetricsDuration,
-			sendMetricsDuration)
+			cfg.PollInterval,
+			cfg.ReportInterval)
 		return errors.New(errMsg)
 	}
 
-	updMetricsTicker := time.NewTicker(time.Second * time.Duration(updMetricsDuration))
-	sendMetricsTicker := time.NewTicker(time.Second * time.Duration(sendMetricsDuration))
+	updMetricsTicker := time.NewTicker(cfg.PollInterval)
+	sendMetricsTicker := time.NewTicker(cfg.ReportInterval)
 
 	updURL := url.URL{
 		Scheme: scheme,
-		Host:   host,
+		Host:   cfg.Address,
 	}
 
 	var rms runtime.MemStats

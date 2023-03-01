@@ -16,16 +16,27 @@ func TestGetConfigServer(t *testing.T) {
 	}{
 		{
 			name: "Create server config from env variables test",
-			env:  map[string]string{"ADDRESS": "127.0.0.1:8000"},
+			env: map[string]string{
+				"ADDRESS":        "127.0.0.1:8000",
+				"STORE_INTERVAL": "250s",
+				"STORE_FILE":     "/tmp/metrics-db.json",
+				"RESTORE":        "0",
+			},
 			want: ServerConfig{
-				Address: "127.0.0.1:8000",
+				Address:       "127.0.0.1:8000",
+				StoreInterval: 250 * time.Second,
+				StoreFile:     "/tmp/metrics-db.json",
+				Restore:       false,
 			},
 		},
 		{
 			name: "Create server config from default values test",
 			env:  map[string]string{},
 			want: ServerConfig{
-				Address: "127.0.0.1:8080",
+				Address:       "127.0.0.1:8080",
+				StoreInterval: 300 * time.Second,
+				StoreFile:     "/tmp/devops-metrics-db.json",
+				Restore:       true,
 			},
 		},
 	}

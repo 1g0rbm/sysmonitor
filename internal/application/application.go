@@ -3,12 +3,11 @@ package application
 import (
 	"encoding/json"
 	"errors"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"html/template"
 	"log"
 	"net/http"
-
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 
 	"github.com/1g0rbm/sysmonitor/internal/config"
 	"github.com/1g0rbm/sysmonitor/internal/metric"
@@ -43,8 +42,11 @@ func NewApp(s storage.Storage, cfg config.ServerConfig) *App {
 	return app
 }
 
-func (app App) Run() error {
-	return http.ListenAndServe(app.config.Address, app.router)
+func (app App) Run() *http.Server {
+	return &http.Server{
+		Addr:    app.config.Address,
+		Handler: app.router,
+	}
 }
 
 func (app App) getAllMetricsHandler(w http.ResponseWriter, r *http.Request) {

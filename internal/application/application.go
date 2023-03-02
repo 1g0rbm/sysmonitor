@@ -1,6 +1,7 @@
 package application
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"github.com/go-chi/chi/v5"
@@ -18,13 +19,20 @@ type App struct {
 	storage storage.Storage
 	router  *chi.Mux
 	config  config.ServerConfig
+	server  *http.Server
 }
 
 func NewApp(s storage.Storage, cfg config.ServerConfig) *App {
+	r := chi.NewRouter()
+
 	app := &App{
 		storage: s,
 		config:  cfg,
-		router:  chi.NewRouter(),
+		router:  r,
+		server: &http.Server{
+			Addr:    config.Address,
+			Handler: r,
+		},
 	}
 
 	app.router.Use(middleware.RequestID)
@@ -42,11 +50,12 @@ func NewApp(s storage.Storage, cfg config.ServerConfig) *App {
 	return app
 }
 
-func (app App) Run() *http.Server {
-	return &http.Server{
-		Addr:    app.config.Address,
-		Handler: app.router,
-	}
+func (app App) Run() error {
+	return app.server.ListenAndServe()
+}
+
+func (app App) Stop(ctx context.Context) error {
+	return app.server.Shutdown(ctx)
 }
 
 func (app App) getAllMetricsHandler(w http.ResponseWriter, r *http.Request) {

@@ -3,8 +3,6 @@ package application
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/1g0rbm/sysmonitor/internal/config"
-	"github.com/1g0rbm/sysmonitor/internal/metric"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -13,6 +11,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/1g0rbm/sysmonitor/internal/config"
+	"github.com/1g0rbm/sysmonitor/internal/metric"
 	"github.com/1g0rbm/sysmonitor/internal/storage"
 )
 

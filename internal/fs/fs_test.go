@@ -28,7 +28,7 @@ func TestMetricReaderWriter(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mw, wErr := NewMetricWriter(tt.path)
-			require.Nil(t, err)
+			require.Nil(t, wErr)
 			defer mw.Close()
 
 			wErr = mw.Write(tt.metric)

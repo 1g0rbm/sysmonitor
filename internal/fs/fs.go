@@ -2,7 +2,6 @@ package fs
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"os"
@@ -75,7 +74,7 @@ func DumpStorage(ms storage.MemStorage, filepath string) error {
 
 	for _, m := range ms {
 		if err := mw.Write(m); err != nil {
-			log.Println(fmt.Sprintf("save metric %s error: %s", m.Name(), err))
+			log.Printf("save metric %s error: %s", m.Name(), err)
 		}
 	}
 

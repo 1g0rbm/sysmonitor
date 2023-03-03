@@ -66,7 +66,9 @@ func (app App) Run() (err error) {
 		go func() {
 			dumpTicker := time.NewTicker(app.config.StoreInterval)
 			defer dumpTicker.Stop()
+
 			log.Printf("Metrics will be dumped every %d seconds", app.config.StoreInterval)
+
 			for {
 				select {
 				case <-dumpTicker.C:

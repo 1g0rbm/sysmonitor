@@ -4,11 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	"github.com/1g0rbm/sysmonitor/internal/fs"
 	"html/template"
 	"log"
 	"net/http"
+	"time"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 
 	"github.com/1g0rbm/sysmonitor/internal/config"
 	"github.com/1g0rbm/sysmonitor/internal/metric"
@@ -22,10 +25,10 @@ type App struct {
 	server  *http.Server
 }
 
-func NewApp(s storage.Storage, cfg config.ServerConfig) *App {
+func NewApp(s storage.Storage, cfg config.ServerConfig) (app *App, err error) {
 	r := chi.NewRouter()
 
-	app := &App{
+	app = &App{
 		storage: s,
 		config:  cfg,
 		router:  r,
@@ -47,14 +50,37 @@ func NewApp(s storage.Storage, cfg config.ServerConfig) *App {
 	app.router.Post("/update/", app.updateJSONMetricHandler)
 	app.router.Post("/value/", app.getJSONMetricHandler)
 
-	return app
+	return app, nil
 }
 
-func (app App) Run() error {
-	return app.server.ListenAndServe()
+func (app App) Run() (err error) {
+	if app.config.StoreInterval > 0 && app.config.StoreFile != "" {
+		go func() {
+			dumpTicker := time.NewTicker(app.config.StoreInterval)
+			defer dumpTicker.Stop()
+			for {
+				select {
+				case <-dumpTicker.C:
+					dErr := fs.DumpStorage(app.storage.All(), app.config.StoreFile)
+					if dErr != nil && err == nil {
+						err = dErr
+					}
+				}
+			}
+		}()
+	}
+
+	err = app.server.ListenAndServe()
+
+	return
 }
 
 func (app App) Stop(ctx context.Context) error {
+	dErr := fs.DumpStorage(app.storage.All(), app.config.StoreFile)
+	if dErr != nil {
+		return dErr
+	}
+
 	return app.server.Shutdown(ctx)
 }
 

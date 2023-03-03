@@ -25,7 +25,7 @@ type App struct {
 	server  *http.Server
 }
 
-func NewApp(s storage.Storage, cfg config.ServerConfig) (app *App, err error) {
+func NewApp(s storage.Storage, cfg config.ServerConfig) (app *App) {
 	r := chi.NewRouter()
 
 	app = &App{
@@ -50,7 +50,7 @@ func NewApp(s storage.Storage, cfg config.ServerConfig) (app *App, err error) {
 	app.router.Post("/update/", app.updateJSONMetricHandler)
 	app.router.Post("/value/", app.getJSONMetricHandler)
 
-	return app, nil
+	return app
 }
 
 func (app App) Run() (err error) {

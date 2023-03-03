@@ -18,10 +18,7 @@ import (
 func main() {
 	cfg := config.GetConfigServer()
 	s := storage.NewStorage()
-	app, err := application.NewApp(s, cfg)
-	if err != nil {
-		log.Fatalf("Create application err: %s", err)
-	}
+	app := application.NewApp(s, cfg)
 
 	go func() {
 		if err := app.Run(); err != nil && !errors.Is(err, http.ErrServerClosed) {

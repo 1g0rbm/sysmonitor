@@ -33,7 +33,7 @@ func NewApp(s storage.Storage, cfg config.ServerConfig) (app *App) {
 		config:  cfg,
 		router:  r,
 		server: &http.Server{
-			Addr:    config.Address,
+			Addr:    cfg.Address,
 			Handler: r,
 		},
 	}

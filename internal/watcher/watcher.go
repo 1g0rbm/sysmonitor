@@ -6,13 +6,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/1g0rbm/sysmonitor/internal/config"
 	"math/rand"
 	"net/http"
 	"net/url"
 	"runtime"
 	"time"
 
+	"github.com/1g0rbm/sysmonitor/internal/config"
 	"github.com/1g0rbm/sysmonitor/internal/metric"
 )
 

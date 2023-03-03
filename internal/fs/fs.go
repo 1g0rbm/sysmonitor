@@ -67,18 +67,11 @@ func (mr *MetricReader) Close() error {
 	return mr.file.Close()
 }
 
-func DumpStorage(ms storage.MemStorage, filepath string) (err error) {
+func DumpStorage(ms storage.MemStorage, filepath string) error {
 	mw, err := NewMetricWriter(filepath)
 	if err != nil {
 		return err
 	}
-
-	defer func(mw *MetricWriter) {
-		closeErr := mw.Close()
-		if closeErr != nil && err == nil {
-			err = closeErr
-		}
-	}(mw)
 
 	for _, m := range ms {
 		if err := mw.Write(m); err != nil {

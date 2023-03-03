@@ -3,6 +3,7 @@ package fs
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"os"
 
@@ -91,4 +92,26 @@ func DumpStorage(ms storage.MemStorage, filepath string) (err error) {
 	}
 
 	return nil
+}
+
+func RestoreStorage(ms storage.Storage, filepath string) (err error) {
+	mr, err := NewMetricReader(filepath)
+
+	defer func(mr *MetricReader) {
+		closeErr := mr.Close()
+		if closeErr != nil && err == nil {
+			err = closeErr
+		}
+	}(mr)
+
+	for {
+		m, err := mr.Read()
+		if err == io.EOF {
+			break
+		}
+
+		ms.Set(m)
+	}
+
+	return
 }

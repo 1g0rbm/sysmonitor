@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/1g0rbm/sysmonitor/internal/fs"
 	"html/template"
 	"log"
 	"net/http"
@@ -14,6 +13,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 
 	"github.com/1g0rbm/sysmonitor/internal/config"
+	"github.com/1g0rbm/sysmonitor/internal/fs"
 	"github.com/1g0rbm/sysmonitor/internal/metric"
 	"github.com/1g0rbm/sysmonitor/internal/storage"
 )
@@ -54,10 +54,19 @@ func NewApp(s storage.Storage, cfg config.ServerConfig) (app *App) {
 }
 
 func (app App) Run() (err error) {
+	if app.config.Restore {
+		err = fs.RestoreStorage(app.storage, app.config.StoreFile)
+		if err != nil {
+			return err
+		}
+		log.Println("Metrics restored from file")
+	}
+
 	if app.config.StoreInterval > 0 && app.config.StoreFile != "" {
 		go func() {
 			dumpTicker := time.NewTicker(app.config.StoreInterval)
 			defer dumpTicker.Stop()
+			log.Printf("Metrics will be dumped every %d seconds", app.config.StoreInterval)
 			for {
 				select {
 				case <-dumpTicker.C:

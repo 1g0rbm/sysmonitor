@@ -69,13 +69,10 @@ func (app App) Run() (err error) {
 
 			log.Printf("Metrics will be dumped every %d seconds", app.config.StoreInterval)
 
-			for {
-				select {
-				case <-dumpTicker.C:
-					dErr := fs.DumpStorage(app.storage.All(), app.config.StoreFile)
-					if dErr != nil && err == nil {
-						err = dErr
-					}
+			for range dumpTicker.C {
+				dErr := fs.DumpStorage(app.storage.All(), app.config.StoreFile)
+				if dErr != nil && err == nil {
+					err = dErr
 				}
 			}
 		}()

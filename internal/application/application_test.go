@@ -32,21 +32,6 @@ func Test_updateJsonHandler(t *testing.T) {
 		want   want
 	}{
 		{
-			name:   "success update gauge metric test",
-			path:   "/update/",
-			method: http.MethodPost,
-			metric: metric.Metrics{
-				ID:    "Alloc",
-				MType: metric.GaugeType,
-				Value: &fVal,
-			},
-			want: want{
-				contentType: "application/json",
-				statusCode:  http.StatusOK,
-				content:     `{"id":"Alloc","type":"gauge","value":2.01}`,
-			},
-		},
-		{
 			name:   "success update counter metric test",
 			path:   "/update/",
 			method: http.MethodPost,
@@ -59,6 +44,21 @@ func Test_updateJsonHandler(t *testing.T) {
 				contentType: "application/json",
 				statusCode:  http.StatusOK,
 				content:     `{"id":"PollCounter","type":"counter","delta":5}`,
+			},
+		},
+		{
+			name:   "success update gauge metric test",
+			path:   "/update/",
+			method: http.MethodPost,
+			metric: metric.Metrics{
+				ID:    "Alloc",
+				MType: metric.GaugeType,
+				Value: &fVal,
+			},
+			want: want{
+				contentType: "application/json",
+				statusCode:  http.StatusOK,
+				content:     `{"id":"Alloc","type":"gauge","value":2.01}`,
 			},
 		},
 		{
@@ -78,7 +78,7 @@ func Test_updateJsonHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			app := NewApp(storage.NewStorage(), config.GetConfigServer())
+			app := NewApp(storage.NewStorage(), config.GetConfigServer([]string{}))
 
 			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()
@@ -166,7 +166,7 @@ func Test_getOneJsonHandler(t *testing.T) {
 			s := storage.NewStorage()
 			s.Set(m1)
 			s.Set(m2)
-			app := NewApp(s, config.GetConfigServer())
+			app := NewApp(s, config.GetConfigServer([]string{}))
 
 			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()
@@ -256,7 +256,7 @@ func Test_updateHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			app := NewApp(storage.NewStorage(), config.GetConfigServer())
+			app := NewApp(storage.NewStorage(), config.GetConfigServer([]string{}))
 
 			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()
@@ -346,7 +346,7 @@ func Test_getOneHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			app := NewApp(storage.NewStorage(), config.GetConfigServer())
+			app := NewApp(storage.NewStorage(), config.GetConfigServer([]string{}))
 
 			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()
@@ -408,7 +408,7 @@ func Test_getAllHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			app := NewApp(storage.NewStorage(), config.GetConfigServer())
+			app := NewApp(storage.NewStorage(), config.GetConfigServer([]string{}))
 
 			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()

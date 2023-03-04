@@ -13,7 +13,7 @@ func TestGetConfigServer(t *testing.T) {
 	tests := []struct {
 		name string
 		env  map[string]string
-		want ServerConfig
+		want *ServerConfig
 	}{
 		{
 			name: "Create server config from env variables test",
@@ -23,7 +23,7 @@ func TestGetConfigServer(t *testing.T) {
 				"STORE_FILE":     "/tmp/metrics-db.json",
 				"RESTORE":        "0",
 			},
-			want: ServerConfig{
+			want: &ServerConfig{
 				Address:       "127.0.0.1:8000",
 				StoreInterval: 250 * time.Second,
 				StoreFile:     "/tmp/metrics-db.json",
@@ -33,7 +33,7 @@ func TestGetConfigServer(t *testing.T) {
 		{
 			name: "Create server config from default values test",
 			env:  map[string]string{},
-			want: ServerConfig{
+			want: &ServerConfig{
 				Address:       "127.0.0.1:8080",
 				StoreInterval: 300 * time.Second,
 				StoreFile:     "/tmp/devops-metrics-db.json",
@@ -54,7 +54,7 @@ func TestGetConfigServer(t *testing.T) {
 				}
 			}()
 
-			assert.Equal(t, tt.want, GetConfigServer())
+			assert.Equal(t, tt.want, GetConfigServer([]string{}))
 		})
 	}
 }
@@ -63,7 +63,7 @@ func TestGetConfigAgent(t *testing.T) {
 	tests := []struct {
 		name string
 		env  map[string]string
-		want AgentConfig
+		want *AgentConfig
 	}{
 		{
 			name: "Create agent config from env variables test",
@@ -72,7 +72,7 @@ func TestGetConfigAgent(t *testing.T) {
 				"REPORT_INTERVAL": "25s",
 				"POLL_INTERVAL":   "10s",
 			},
-			want: AgentConfig{
+			want: &AgentConfig{
 				Address:        "127.0.0.1:8000",
 				ReportInterval: 25 * time.Second,
 				PollInterval:   10 * time.Second,
@@ -81,7 +81,7 @@ func TestGetConfigAgent(t *testing.T) {
 		{
 			name: "Create agent config from default values test",
 			env:  map[string]string{},
-			want: AgentConfig{
+			want: &AgentConfig{
 				Address:        "127.0.0.1:8080",
 				ReportInterval: 10 * time.Second,
 				PollInterval:   2 * time.Second,
@@ -101,7 +101,7 @@ func TestGetConfigAgent(t *testing.T) {
 				}
 			}()
 
-			assert.Equal(t, tt.want, GetConfigAgent())
+			assert.Equal(t, tt.want, GetConfigAgent([]string{}))
 		})
 	}
 }

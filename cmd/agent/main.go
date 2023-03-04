@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"github.com/1g0rbm/sysmonitor/internal/config"
 	"github.com/1g0rbm/sysmonitor/internal/watcher"
@@ -10,7 +11,7 @@ import (
 func main() {
 	w := watcher.NewWatcher()
 
-	agentConfig := config.GetConfigAgent()
+	agentConfig := config.GetConfigAgent(os.Args[1:])
 
 	log.Fatal(w.Run(agentConfig))
 }

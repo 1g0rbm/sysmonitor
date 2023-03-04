@@ -17,12 +17,12 @@ const (
 )
 
 var (
-	address        string
-	reportInterval time.Duration
-	pollInterval   time.Duration
-	storeInterval  time.Duration
-	storeFile      string
-	restore        bool
+	address        *string
+	reportInterval *time.Duration
+	pollInterval   *time.Duration
+	storeInterval  *time.Duration
+	storeFile      *string
+	restore        *bool
 )
 
 type ServerConfig struct {
@@ -38,33 +38,35 @@ type AgentConfig struct {
 	PollInterval   time.Duration
 }
 
-func GetConfigServer() *ServerConfig {
-	flag.StringVar(&address, "a", defaultAddress, "-a=<VALUE>")
-	flag.DurationVar(&storeInterval, "i", defaultStoreInterval, "-i=<VALUE>")
-	flag.StringVar(&storeFile, "f", defaultStoreFile, "-f=<VALUE")
-	flag.BoolVar(&restore, "r", defaultRestore, "-r=<VALUE>")
+func GetConfigServer(args []string) *ServerConfig {
+	fs := flag.NewFlagSet("", flag.ExitOnError)
+	address = fs.String("a", defaultAddress, "-a=<VALUE>")
+	storeInterval = fs.Duration("i", defaultStoreInterval, "-i=<VALUE>")
+	storeFile = fs.String("f", defaultStoreFile, "-f=<VALUE")
+	restore = fs.Bool("r", defaultRestore, "-r=<VALUE>")
 
-	flag.Parse()
+	_ = fs.Parse(args)
 
 	return &ServerConfig{
-		Address:       getEnvString("ADDRESS", address),
-		StoreInterval: getEnvDuration("STORE_INTERVAL", storeInterval),
-		StoreFile:     getEnvString("STORE_FILE", storeFile),
-		Restore:       getEnvBool("RESTORE", restore),
+		Address:       getEnvString("ADDRESS", *address),
+		StoreInterval: getEnvDuration("STORE_INTERVAL", *storeInterval),
+		StoreFile:     getEnvString("STORE_FILE", *storeFile),
+		Restore:       getEnvBool("RESTORE", *restore),
 	}
 }
 
-func GetConfigAgent() *AgentConfig {
-	flag.StringVar(&address, "a", defaultAddress, "-a=<VALUE>")
-	flag.DurationVar(&reportInterval, "r", defaultReportInterval, "-r=<VALUE>")
-	flag.DurationVar(&pollInterval, "p", defaultPollInterval, "-p=<VALUE>")
+func GetConfigAgent(args []string) *AgentConfig {
+	fs := flag.NewFlagSet("", flag.ExitOnError)
+	address = fs.String("a", defaultAddress, "-a=<VALUE>")
+	reportInterval = fs.Duration("r", defaultReportInterval, "-r=<VALUE>")
+	pollInterval = fs.Duration("p", defaultPollInterval, "-p=<VALUE>")
 
-	flag.Parse()
+	_ = fs.Parse(args)
 
 	return &AgentConfig{
-		Address:        getEnvString("ADDRESS", address),
-		ReportInterval: getEnvDuration("REPORT_INTERVAL", reportInterval),
-		PollInterval:   getEnvDuration("POLL_INTERVAL", pollInterval),
+		Address:        getEnvString("ADDRESS", *address),
+		ReportInterval: getEnvDuration("REPORT_INTERVAL", *reportInterval),
+		PollInterval:   getEnvDuration("POLL_INTERVAL", *pollInterval),
 	}
 }
 

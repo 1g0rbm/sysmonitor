@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"flag"
 	"log"
 	"net/http"
 	"os"
@@ -16,6 +17,8 @@ import (
 )
 
 func main() {
+	flag.Parse()
+
 	cfg := config.GetConfigServer()
 	s := storage.NewStorage()
 	app := application.NewApp(s, cfg)

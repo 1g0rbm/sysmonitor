@@ -1,18 +1,16 @@
 package main
 
 import (
+	"flag"
 	"log"
 
 	"github.com/1g0rbm/sysmonitor/internal/config"
 	"github.com/1g0rbm/sysmonitor/internal/watcher"
 )
 
-const (
-	updMetricsDuration  int = 2
-	sendMetricsDuration int = 10
-)
-
 func main() {
+	flag.Parse()
+
 	w := watcher.NewWatcher()
 
 	agentConfig := config.GetConfigAgent()

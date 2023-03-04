@@ -1,18 +1,28 @@
 package config
 
 import (
+	"flag"
 	"os"
 	"strconv"
 	"time"
 )
 
 const (
-	Address        = "127.0.0.1:8080"
-	ReportInterval = 10 * time.Second
-	PollInterval   = 2 * time.Second
-	StoreInterval  = 300 * time.Second
-	StoreFile      = "/tmp/devops-metrics-db.json"
-	Restore        = true
+	defaultAddress        = "127.0.0.1:8080"
+	defaultReportInterval = 10 * time.Second
+	defaultPollInterval   = 2 * time.Second
+	defaultStoreInterval  = 300 * time.Second
+	defaultStoreFile      = "/tmp/devops-metrics-db.json"
+	defaultRestore        = true
+)
+
+var (
+	address        string
+	reportInterval time.Duration
+	pollInterval   time.Duration
+	storeInterval  time.Duration
+	storeFile      string
+	restore        bool
 )
 
 type ServerConfig struct {
@@ -29,19 +39,28 @@ type AgentConfig struct {
 }
 
 func GetConfigServer() ServerConfig {
+	flag.StringVar(&address, "a", defaultAddress, "-a=<VALUE>")
+	flag.DurationVar(&storeInterval, "i", defaultStoreInterval, "-i=<VALUE>")
+	flag.StringVar(&storeFile, "f", defaultStoreFile, "-f=<VALUE")
+	flag.BoolVar(&restore, "r", defaultRestore, "-r=<VALUE>")
+
 	return ServerConfig{
-		Address:       getEnvString("ADDRESS", Address),
-		StoreInterval: getEnvDuration("STORE_INTERVAL", StoreInterval),
-		StoreFile:     getEnvString("STORE_FILE", StoreFile),
-		Restore:       getEnvBool("RESTORE", Restore),
+		Address:       getEnvString("ADDRESS", address),
+		StoreInterval: getEnvDuration("STORE_INTERVAL", storeInterval),
+		StoreFile:     getEnvString("STORE_FILE", storeFile),
+		Restore:       getEnvBool("RESTORE", restore),
 	}
 }
 
 func GetConfigAgent() AgentConfig {
+	flag.StringVar(&address, "a", defaultAddress, "-a=<VALUE>")
+	flag.DurationVar(&reportInterval, "r", defaultReportInterval, "-r=<VALUE>")
+	flag.DurationVar(&pollInterval, "p", defaultPollInterval, "-p=<VALUE>")
+
 	return AgentConfig{
-		Address:        getEnvString("ADDRESS", Address),
-		ReportInterval: getEnvDuration("REPORT_INTERVAL", ReportInterval),
-		PollInterval:   getEnvDuration("POLL_INTERVAL", PollInterval),
+		Address:        getEnvString("ADDRESS", address),
+		ReportInterval: getEnvDuration("REPORT_INTERVAL", reportInterval),
+		PollInterval:   getEnvDuration("POLL_INTERVAL", pollInterval),
 	}
 }
 

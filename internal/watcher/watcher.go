@@ -127,7 +127,7 @@ func (w Watcher) getAll() []metric.IMetric {
 	return all
 }
 
-func (w Watcher) Run(cfg config.AgentConfig) error {
+func (w Watcher) Run(cfg *config.AgentConfig) error {
 	if cfg.PollInterval >= cfg.ReportInterval {
 		errMsg := fmt.Sprintf(
 			"update duration (%d) should be less than send duration (%d)",

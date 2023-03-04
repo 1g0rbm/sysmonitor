@@ -21,11 +21,11 @@ import (
 type App struct {
 	storage storage.Storage
 	router  *chi.Mux
-	config  config.ServerConfig
+	config  *config.ServerConfig
 	server  *http.Server
 }
 
-func NewApp(s storage.Storage, cfg config.ServerConfig) (app *App) {
+func NewApp(s storage.Storage, cfg *config.ServerConfig) (app *App) {
 	r := chi.NewRouter()
 
 	app = &App{

@@ -38,7 +38,7 @@ type AgentConfig struct {
 	PollInterval   time.Duration
 }
 
-func GetConfigServer() ServerConfig {
+func GetConfigServer() *ServerConfig {
 	flag.StringVar(&address, "a", defaultAddress, "-a=<VALUE>")
 	flag.DurationVar(&storeInterval, "i", defaultStoreInterval, "-i=<VALUE>")
 	flag.StringVar(&storeFile, "f", defaultStoreFile, "-f=<VALUE")
@@ -46,7 +46,7 @@ func GetConfigServer() ServerConfig {
 
 	flag.Parse()
 
-	return ServerConfig{
+	return &ServerConfig{
 		Address:       getEnvString("ADDRESS", address),
 		StoreInterval: getEnvDuration("STORE_INTERVAL", storeInterval),
 		StoreFile:     getEnvString("STORE_FILE", storeFile),
@@ -54,14 +54,14 @@ func GetConfigServer() ServerConfig {
 	}
 }
 
-func GetConfigAgent() AgentConfig {
+func GetConfigAgent() *AgentConfig {
 	flag.StringVar(&address, "a", defaultAddress, "-a=<VALUE>")
 	flag.DurationVar(&reportInterval, "r", defaultReportInterval, "-r=<VALUE>")
 	flag.DurationVar(&pollInterval, "p", defaultPollInterval, "-p=<VALUE>")
 
 	flag.Parse()
 
-	return AgentConfig{
+	return &AgentConfig{
 		Address:        getEnvString("ADDRESS", address),
 		ReportInterval: getEnvDuration("REPORT_INTERVAL", reportInterval),
 		PollInterval:   getEnvDuration("POLL_INTERVAL", pollInterval),

@@ -44,6 +44,8 @@ func GetConfigServer() ServerConfig {
 	flag.StringVar(&storeFile, "f", defaultStoreFile, "-f=<VALUE")
 	flag.BoolVar(&restore, "r", defaultRestore, "-r=<VALUE>")
 
+	flag.Parse()
+
 	return ServerConfig{
 		Address:       getEnvString("ADDRESS", address),
 		StoreInterval: getEnvDuration("STORE_INTERVAL", storeInterval),
@@ -56,6 +58,8 @@ func GetConfigAgent() AgentConfig {
 	flag.StringVar(&address, "a", defaultAddress, "-a=<VALUE>")
 	flag.DurationVar(&reportInterval, "r", defaultReportInterval, "-r=<VALUE>")
 	flag.DurationVar(&pollInterval, "p", defaultPollInterval, "-p=<VALUE>")
+
+	flag.Parse()
 
 	return AgentConfig{
 		Address:        getEnvString("ADDRESS", address),

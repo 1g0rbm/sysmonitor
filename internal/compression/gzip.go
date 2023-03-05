@@ -11,11 +11,13 @@ type GzipResponseWriter struct {
 	Writer io.Writer
 }
 
-func NewGzipResponseWriter(w http.ResponseWriter) *GzipResponseWriter {
-	w.Header().Set("Content-Encoding", "gzip")
+func NewGzipResponseWriter(rw http.ResponseWriter) *GzipResponseWriter {
+	rw.Header().Set("Content-Encoding", "gzip")
+	gw := gzip.NewWriter(rw)
+	defer gw.Close()
 	return &GzipResponseWriter{
-		ResponseWriter: w,
-		Writer:         gzip.NewWriter(w),
+		ResponseWriter: rw,
+		Writer:         gw,
 	}
 }
 

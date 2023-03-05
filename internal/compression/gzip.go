@@ -20,5 +20,5 @@ func NewGzipResponseWriter(w http.ResponseWriter) *GzipResponseWriter {
 }
 
 func (grw GzipResponseWriter) Write(b []byte) (int, error) {
-	return grw.Write(b)
+	return grw.Writer.Write(b)
 }

@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"compress/gzip"
+	"github.com/1g0rbm/sysmonitor/internal/compression"
 	"net/http"
 	"strings"
 )
@@ -28,15 +29,9 @@ func Gzip(h http.Handler) http.Handler {
 			}(gz)
 		}
 
-		w.Header().Set("Content-Encoding", "gzip")
-		gz := gzip.NewWriter(w)
+		grw := compression.NewGzipResponseWriter(w)
 
-		h.ServeHTTP(w, r)
+		h.ServeHTTP(grw, r)
 
-		defer func(gz *gzip.Writer) {
-			if err := gz.Close(); err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-			}
-		}(gz)
 	})
 }

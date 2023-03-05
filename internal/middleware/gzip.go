@@ -9,11 +9,6 @@ import (
 
 func Gzip(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
-			h.ServeHTTP(w, r)
-			return
-		}
-
 		if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
 			gz, err := gzip.NewReader(r.Body)
 			if err != nil {
@@ -29,7 +24,19 @@ func Gzip(h http.Handler) http.Handler {
 			}(gz)
 		}
 
-		grw := compression.NewGzipResponseWriter(w)
+		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+			h.ServeHTTP(w, r)
+			return
+		}
+
+		gw := gzip.NewWriter(w)
+		defer func(gw *gzip.Writer) {
+			if err := gw.Close(); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
+		}(gw)
+
+		grw := compression.NewGzipResponseWriter(w, gw)
 
 		h.ServeHTTP(grw, r)
 

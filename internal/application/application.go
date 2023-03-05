@@ -95,6 +95,7 @@ func (app App) Stop(ctx context.Context) error {
 }
 
 func (app App) getAllMetricsHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	t, tErr := template.New("metrics").Parse(AllMetricsTemplate)
 	if tErr != nil {
 		http.Error(w, tErr.Error(), http.StatusInternalServerError)

@@ -1,7 +1,6 @@
 package compression
 
 import (
-	"compress/gzip"
 	"io"
 	"net/http"
 )
@@ -11,11 +10,10 @@ type GzipResponseWriter struct {
 	Writer io.Writer
 }
 
-func NewGzipResponseWriter(rw http.ResponseWriter) *GzipResponseWriter {
+func NewGzipResponseWriter(rw http.ResponseWriter, gw io.Writer) GzipResponseWriter {
 	rw.Header().Set("Content-Encoding", "gzip")
-	gw := gzip.NewWriter(rw)
-	defer gw.Close()
-	return &GzipResponseWriter{
+
+	return GzipResponseWriter{
 		ResponseWriter: rw,
 		Writer:         gw,
 	}

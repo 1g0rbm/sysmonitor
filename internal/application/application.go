@@ -15,6 +15,7 @@ import (
 	"github.com/1g0rbm/sysmonitor/internal/config"
 	"github.com/1g0rbm/sysmonitor/internal/fs"
 	"github.com/1g0rbm/sysmonitor/internal/metric"
+	localmiddleware "github.com/1g0rbm/sysmonitor/internal/middleware"
 	"github.com/1g0rbm/sysmonitor/internal/storage"
 )
 
@@ -42,6 +43,7 @@ func NewApp(s storage.Storage, cfg *config.ServerConfig) (app *App) {
 	app.router.Use(middleware.RealIP)
 	app.router.Use(middleware.Logger)
 	app.router.Use(middleware.Recoverer)
+	app.router.Use(localmiddleware.Gzip)
 
 	app.router.Get("/", app.getAllMetricsHandler)
 	app.router.Post("/update/{Type}/{Name}/{Value}", app.updateMetricHandler)

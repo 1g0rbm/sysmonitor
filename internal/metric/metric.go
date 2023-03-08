@@ -16,8 +16,6 @@ type IMetric interface {
 	Name() string
 	Type() string
 	ValueAsString() string
-	Gauge() *Gauge
-	Counter() *Counter
 	Update(m IMetric) (IMetric, error)
 }
 
@@ -112,7 +110,7 @@ func NewMetric(name string, mType string, value string) (IMetric, error) {
 	case GaugeType:
 		val, err := strconv.ParseFloat(value, 64)
 		if err != nil {
-			return GaugeMetric{}, ErrInvalidValue
+			return nil, ErrInvalidValue
 		}
 		return GaugeMetric{
 			name:  name,
@@ -121,7 +119,7 @@ func NewMetric(name string, mType string, value string) (IMetric, error) {
 	case CounterType:
 		val, err := strconv.ParseInt(value, 10, 64)
 		if err != nil {
-			return CounterMetric{}, ErrInvalidValue
+			return nil, ErrInvalidValue
 		}
 		return CounterMetric{
 			name:  name,
@@ -199,7 +197,12 @@ func (cm CounterMetric) NormalizeValue() (Counter, error) {
 }
 
 func (cm CounterMetric) Update(ncm IMetric) (IMetric, error) {
-	nv := cm.Value() + *ncm.Counter()
+	newVal, newValErr := strconv.ParseInt(ncm.ValueAsString(), 10, 64)
+	if newValErr != nil {
+		return nil, newValErr
+	}
+
+	nv := cm.Value() + Counter(newVal)
 	snv := fmt.Sprintf("%d", nv)
 
 	m, err := NewMetric(cm.Name(), cm.Type(), snv)

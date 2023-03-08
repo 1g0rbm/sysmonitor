@@ -64,7 +64,7 @@ func (app App) Run() (err error) {
 		log.Println("Metrics restored from file")
 	}
 
-	if app.config.StoreInterval > 0 && app.config.StoreFile != "" {
+	if app.config.NeedPeriodicalStore() {
 		go func() {
 			dumpTicker := time.NewTicker(app.config.StoreInterval)
 			defer dumpTicker.Stop()

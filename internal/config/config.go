@@ -38,7 +38,7 @@ type AgentConfig struct {
 	PollInterval   time.Duration
 }
 
-func GetConfigServer(args []string) *ServerConfig {
+func GetConfigServer() *ServerConfig {
 	flag.StringVar(&address, "a", defaultAddress, "-a=<VALUE>")
 	flag.DurationVar(&storeInterval, "i", defaultStoreInterval, "-i=<VALUE>")
 	flag.StringVar(&storeFile, "f", defaultStoreFile, "-f=<VALUE")
@@ -54,7 +54,11 @@ func GetConfigServer(args []string) *ServerConfig {
 	}
 }
 
-func GetConfigAgent(args []string) *AgentConfig {
+func (sc ServerConfig) NeedPeriodicalStore() bool {
+	return sc.StoreInterval > 0 && sc.StoreFile != ""
+}
+
+func GetConfigAgent() *AgentConfig {
 	flag.StringVar(&address, "a", defaultAddress, "-a=<VALUE>")
 	flag.DurationVar(&reportInterval, "r", defaultReportInterval, "-r=<VALUE>")
 	flag.DurationVar(&pollInterval, "p", defaultPollInterval, "-p=<VALUE>")

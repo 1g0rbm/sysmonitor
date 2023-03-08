@@ -91,6 +91,10 @@ func (m *Metrics) Decode(r io.Reader) error {
 	return nil
 }
 
+func (m *Metrics) Encode() ([]byte, error) {
+	return json.Marshal(m)
+}
+
 func (m *Metrics) ToIMetric() (IMetric, error) {
 	var value string
 	switch m.MType {

@@ -3,7 +3,6 @@ package watcher
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -173,7 +172,7 @@ func sendMetrics(url string, m metric.Metrics) error {
 	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
 	defer cancel()
 
-	b, mErr := json.Marshal(m)
+	b, mErr := m.Encode()
 	if mErr != nil {
 		return mErr
 	}

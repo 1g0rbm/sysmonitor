@@ -2,7 +2,6 @@ package application
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"html/template"
 	"log"
@@ -139,7 +138,7 @@ func (app App) updateJSONMetricHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	b, err := json.Marshal(rm)
+	b, err := rm.Encode()
 	if err != nil {
 		sendJSONResponse(w, http.StatusInternalServerError, []byte("error while response creation"))
 		return
@@ -168,7 +167,7 @@ func (app App) getJSONMetricHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	b, mErr := json.Marshal(resM)
+	b, mErr := resM.Encode()
 	if mErr != nil {
 		sendJSONResponse(w, http.StatusInternalServerError, []byte("internal server error"))
 		log.Fatalf("Metric marshaling error: %s", mErr)

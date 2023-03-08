@@ -2,7 +2,6 @@ package application
 
 import (
 	"bytes"
-	"encoding/json"
 	"flag"
 	"io"
 	"net/http"
@@ -440,7 +439,7 @@ func testJSONRequest(
 	path string,
 	m metric.Metrics,
 ) (*http.Response, string) {
-	b, _ := json.Marshal(m)
+	b, _ := m.Encode()
 	buf := bytes.NewBuffer(b)
 
 	req, err := http.NewRequest(method, ts.URL+path, buf)

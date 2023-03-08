@@ -1,6 +1,7 @@
 package config
 
 import (
+	"flag"
 	"os"
 	"testing"
 	"time"
@@ -55,6 +56,9 @@ func TestGetConfigServer(t *testing.T) {
 			}()
 
 			assert.Equal(t, tt.want, GetConfigServer([]string{}))
+
+			flag.CommandLine = flag.NewFlagSet("", flag.ExitOnError)
+			flag.CommandLine.Init("", flag.ContinueOnError)
 		})
 	}
 }
@@ -102,6 +106,9 @@ func TestGetConfigAgent(t *testing.T) {
 			}()
 
 			assert.Equal(t, tt.want, GetConfigAgent([]string{}))
+
+			flag.CommandLine = flag.NewFlagSet("", flag.ExitOnError)
+			flag.CommandLine.Init("", flag.ContinueOnError)
 		})
 	}
 }

@@ -3,6 +3,7 @@ package application
 import (
 	"bytes"
 	"encoding/json"
+	"flag"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -89,6 +90,9 @@ func Test_updateJsonHandler(t *testing.T) {
 			assert.Equal(t, tt.want.statusCode, resp.StatusCode)
 			assert.Equal(t, tt.want.contentType, resp.Header.Get("Content-Type"))
 			assert.Equal(t, tt.want.content, body)
+
+			flag.CommandLine = flag.NewFlagSet("", flag.ExitOnError)
+			flag.CommandLine.Init("", flag.ContinueOnError)
 		})
 	}
 }
@@ -177,6 +181,9 @@ func Test_getOneJsonHandler(t *testing.T) {
 			assert.Equal(t, tt.want.statusCode, resp.StatusCode)
 			assert.Equal(t, tt.want.contentType, resp.Header.Get("Content-Type"))
 			assert.Equal(t, tt.want.content, body)
+
+			flag.CommandLine = flag.NewFlagSet("", flag.ExitOnError)
+			flag.CommandLine.Init("", flag.ContinueOnError)
 		})
 	}
 }
@@ -267,6 +274,9 @@ func Test_updateHandler(t *testing.T) {
 			assert.Equal(t, tt.want.statusCode, resp.StatusCode)
 			assert.Equal(t, tt.want.contentType, resp.Header.Get("Content-Type"))
 			assert.Equal(t, tt.want.content, body)
+
+			flag.CommandLine = flag.NewFlagSet("", flag.ExitOnError)
+			flag.CommandLine.Init("", flag.ContinueOnError)
 		})
 	}
 }
@@ -361,6 +371,9 @@ func Test_getOneHandler(t *testing.T) {
 			assert.Equal(t, tt.want.statusCode, resp.StatusCode)
 			assert.Equal(t, tt.want.contentType, resp.Header.Get("Content-Type"))
 			assert.Equal(t, tt.want.content, body)
+
+			flag.CommandLine = flag.NewFlagSet("", flag.ExitOnError)
+			flag.CommandLine.Init("", flag.ContinueOnError)
 		})
 	}
 }
@@ -422,6 +435,9 @@ func Test_getAllHandler(t *testing.T) {
 			assert.Equal(t, tt.want.statusCode, resp.StatusCode)
 			assert.Equal(t, tt.want.contentType, resp.Header.Get("Content-Type"))
 			assert.Equal(t, tt.want.content, body)
+
+			flag.CommandLine = flag.NewFlagSet("", flag.ExitOnError)
+			flag.CommandLine.Init("", flag.ContinueOnError)
 		})
 	}
 }

@@ -21,7 +21,7 @@ type MetricReader struct {
 }
 
 func NewMetricWriter(filepath string) (*MetricWriter, error) {
-	file, err := os.OpenFile(filepath, os.O_WRONLY|os.O_CREATE|os.O_APPEND|os.O_TRUNC, 0777)
+	file, err := os.OpenFile(filepath, os.O_WRONLY|os.O_CREATE|os.O_APPEND|os.O_TRUNC, 0664)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +41,7 @@ func (mw *MetricWriter) Close() error {
 }
 
 func NewMetricReader(filepath string) (*MetricReader, error) {
-	file, err := os.OpenFile(filepath, os.O_RDONLY|os.O_CREATE, 0777)
+	file, err := os.OpenFile(filepath, os.O_RDONLY|os.O_CREATE, 0664)
 	if err != nil {
 		return nil, err
 	}

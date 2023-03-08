@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	localmiddleware "github.com/1g0rbm/sysmonitor/internal/middleware"
 	"html/template"
 	"log"
 	"net/http"
@@ -16,6 +15,7 @@ import (
 	"github.com/1g0rbm/sysmonitor/internal/config"
 	"github.com/1g0rbm/sysmonitor/internal/fs"
 	"github.com/1g0rbm/sysmonitor/internal/metric"
+	localmiddleware "github.com/1g0rbm/sysmonitor/internal/middleware"
 	"github.com/1g0rbm/sysmonitor/internal/storage"
 )
 
@@ -111,13 +111,8 @@ func (app App) getAllMetricsHandler(w http.ResponseWriter, r *http.Request) {
 func (app App) updateJSONMetricHandler(w http.ResponseWriter, r *http.Request) {
 	var m metric.Metrics
 
-	if err := json.NewDecoder(r.Body).Decode(&m); err != nil {
-		sendJSONResponse(w, http.StatusBadRequest, []byte("invalid metric structure"))
-		return
-	}
-
-	if m.MType != metric.GaugeType && m.MType != metric.CounterType {
-		sendJSONResponse(w, http.StatusBadRequest, []byte("invalid metric type"))
+	if decodeErr := m.Decode(r.Body); decodeErr != nil {
+		sendJSONResponse(w, http.StatusBadRequest, []byte(decodeErr.Error()))
 		return
 	}
 
@@ -126,13 +121,25 @@ func (app App) updateJSONMetricHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updM, updErr := app.storage.Update(m)
+	im, convertErr := m.ToIMetric()
+	if convertErr != nil {
+		sendJSONResponse(w, http.StatusBadRequest, []byte(convertErr.Error()))
+		return
+	}
+
+	updM, updErr := app.storage.Update(im)
 	if updErr != nil {
 		sendJSONResponse(w, http.StatusInternalServerError, []byte("update error"))
 		return
 	}
 
-	b, err := json.Marshal(updM)
+	rm, rmErr := metric.NewMetricsFromIMetric(updM)
+	if rmErr != nil {
+		sendJSONResponse(w, http.StatusInternalServerError, []byte("update error"))
+		return
+	}
+
+	b, err := json.Marshal(rm)
 	if err != nil {
 		sendJSONResponse(w, http.StatusInternalServerError, []byte("error while response creation"))
 		return
@@ -144,28 +151,24 @@ func (app App) updateJSONMetricHandler(w http.ResponseWriter, r *http.Request) {
 func (app App) getJSONMetricHandler(w http.ResponseWriter, r *http.Request) {
 	var rm metric.Metrics
 
-	if err := json.NewDecoder(r.Body).Decode(&rm); err != nil {
-		sendJSONResponse(w, http.StatusBadRequest, []byte("invalid metric structure"))
+	if decodeErr := rm.Decode(r.Body); decodeErr != nil {
+		sendJSONResponse(w, http.StatusBadRequest, []byte(decodeErr.Error()))
 		return
 	}
 
-	if rm.MType != metric.GaugeType && rm.MType != metric.CounterType {
-		sendJSONResponse(w, http.StatusBadRequest, []byte("invalid metric type"))
-		return
-	}
-
-	m, err := app.storage.Get(rm.Name())
+	m, err := app.storage.Get(rm.ID)
 	if err != nil && errors.Is(storage.ErrMetricNotFound, err) {
 		sendJSONResponse(w, http.StatusNotFound, []byte(err.Error()))
 		return
 	}
-	if err != nil {
-		sendJSONResponse(w, http.StatusInternalServerError, []byte("internal server error"))
-		log.Fatalf("Error during getting metric from storage: %s", err)
+
+	resM, rmErr := metric.NewMetricsFromIMetric(m)
+	if rmErr != nil {
+		sendJSONResponse(w, http.StatusInternalServerError, []byte("update error"))
 		return
 	}
 
-	b, mErr := json.Marshal(m)
+	b, mErr := json.Marshal(resM)
 	if mErr != nil {
 		sendJSONResponse(w, http.StatusInternalServerError, []byte("internal server error"))
 		log.Fatalf("Metric marshaling error: %s", mErr)

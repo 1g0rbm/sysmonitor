@@ -1,12 +1,14 @@
 package fs
 
 import (
-	"github.com/1g0rbm/sysmonitor/internal/metric"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"math/rand"
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/1g0rbm/sysmonitor/internal/metric"
 )
 
 func TestMetricReaderWriter(t *testing.T) {
@@ -17,7 +19,7 @@ func TestMetricReaderWriter(t *testing.T) {
 	tests := []struct {
 		name   string
 		path   string
-		metric metric.IMetric
+		metric metric.Metrics
 	}{
 		{
 			name:   "Write metric test",

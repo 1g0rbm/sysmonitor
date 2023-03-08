@@ -2,9 +2,10 @@ package middleware
 
 import (
 	"compress/gzip"
-	"github.com/1g0rbm/sysmonitor/internal/compression"
 	"net/http"
 	"strings"
+
+	"github.com/1g0rbm/sysmonitor/internal/compression"
 )
 
 func Gzip(h http.Handler) http.Handler {

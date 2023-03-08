@@ -1,7 +1,9 @@
 package metric
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 	"strconv"
 	"strings"
@@ -45,11 +47,11 @@ var (
 	ErrInvalidValue = fmt.Errorf("invalid value")
 )
 
-func NewMetrics(id string, mType string, delta *int64, value *float64) (IMetric, error) {
+func NewMetrics(id string, mType string, delta *int64, value *float64) (Metrics, error) {
 	if mType == CounterType && delta == nil {
-		return nil, fmt.Errorf("delata can not be nil for a counter type")
+		return Metrics{}, fmt.Errorf("delata can not be nil for a counter type")
 	} else if mType == GaugeType && value == nil {
-		return nil, fmt.Errorf("value can not be nil for a gauge type")
+		return Metrics{}, fmt.Errorf("value can not be nil for a gauge type")
 	}
 
 	return Metrics{
@@ -60,68 +62,49 @@ func NewMetrics(id string, mType string, delta *int64, value *float64) (IMetric,
 	}, nil
 }
 
-func (m Metrics) Name() string {
-	return m.ID
-}
-
-func (m Metrics) Type() string {
-	return m.MType
-}
-
-func (m Metrics) ValueAsString() string {
-	switch m.MType {
-	case GaugeType:
-		f := *m.Value - math.Floor(*m.Value)
-		str := fmt.Sprintf("%f", *m.Value)
-		if f > 0 {
-			return strings.TrimRight(str, "0")
-		}
-		return str
-	case CounterType:
-		return fmt.Sprintf("%d", *m.Delta)
-	default:
-		return ""
-	}
-}
-
-func (m Metrics) Gauge() *Gauge {
-	if m.Value == nil {
-		return nil
-	}
-
-	res := Gauge(*m.Value)
-
-	return &res
-}
-
-func (m Metrics) Counter() *Counter {
-	if m.Delta == nil {
-		return nil
-	}
-
-	res := Counter(*m.Delta)
-
-	return &res
-}
-
-func (m Metrics) Update(nm IMetric) (IMetric, error) {
-	if m.Type() != nm.Type() {
-		return nil, fmt.Errorf("invalid tytpe")
-	}
-
+func NewMetricsFromIMetric(m IMetric) (Metrics, error) {
 	switch m.Type() {
 	case GaugeType:
-		return nm, nil
-	case CounterType:
-		updV := *m.Delta + int64(*nm.Counter())
-		updM, err := NewMetrics(nm.Name(), nm.Type(), &updV, nil)
+		val, err := strconv.ParseFloat(m.ValueAsString(), 64)
 		if err != nil {
-			return nil, err
+			return Metrics{}, err
 		}
-		return updM, nil
+		return NewMetrics(m.Name(), m.Type(), nil, &val)
+	case CounterType:
+		val, err := strconv.ParseInt(m.ValueAsString(), 10, 64)
+		if err != nil {
+			return Metrics{}, err
+		}
+		return NewMetrics(m.Name(), m.Type(), &val, nil)
 	default:
-		return nil, fmt.Errorf("undefined tytpe")
+		return Metrics{}, fmt.Errorf("invalid metric type")
 	}
+}
+
+func (m *Metrics) Decode(r io.Reader) error {
+	if err := json.NewDecoder(r).Decode(&m); err != nil {
+		return err
+	}
+
+	if m.MType != GaugeType && m.MType != CounterType {
+		return fmt.Errorf("invalid metric type")
+	}
+
+	return nil
+}
+
+func (m *Metrics) ToIMetric() (IMetric, error) {
+	var value string
+	switch m.MType {
+	case GaugeType:
+		value = fmt.Sprintf("%v", *m.Value)
+	case CounterType:
+		value = fmt.Sprintf("%d", *m.Delta)
+	default:
+		return nil, fmt.Errorf("undefined metric type")
+	}
+
+	return NewMetric(m.ID, m.MType, value)
 }
 
 func NewMetric(name string, mType string, value string) (IMetric, error) {

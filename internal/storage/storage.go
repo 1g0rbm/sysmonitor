@@ -36,24 +36,7 @@ func (ms MemStorage) Get(name string) (metric.IMetric, error) {
 		return nil, ErrMetricNotFound
 	}
 
-	var g *float64
-	if v.Gauge() != nil {
-		b := float64(*v.Gauge())
-		g = &b
-	}
-
-	var d *int64
-	if v.Counter() != nil {
-		b := int64(*v.Counter())
-		d = &b
-	}
-
-	return metric.Metrics{
-		ID:    v.Name(),
-		MType: v.Type(),
-		Value: g,
-		Delta: d,
-	}, nil
+	return v, nil
 }
 
 func (ms MemStorage) GetCounter(name string) (metric.CounterMetric, error) {

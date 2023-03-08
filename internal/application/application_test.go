@@ -79,7 +79,7 @@ func Test_updateJsonHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			app := NewApp(storage.NewStorage(), config.GetConfigServer([]string{}))
+			app := NewApp(storage.NewStorage(), config.GetConfigServer())
 
 			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()
@@ -154,23 +154,14 @@ func Test_getOneJsonHandler(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		fVal := 2.01
-		iVal := int64(5)
-		m1 := metric.Metrics{
-			ID:    "Alloc",
-			MType: metric.GaugeType,
-			Value: &fVal,
-		}
-		m2 := metric.Metrics{
-			ID:    "PollCounter",
-			MType: metric.CounterType,
-			Delta: &iVal,
-		}
+		m1, _ := metric.NewMetric("Alloc", metric.GaugeType, "2.01")
+		m2, _ := metric.NewMetric("PollCounter", metric.CounterType, "5")
+
 		t.Run(tt.name, func(t *testing.T) {
 			s := storage.NewStorage()
 			s.Set(m1)
 			s.Set(m2)
-			app := NewApp(s, config.GetConfigServer([]string{}))
+			app := NewApp(s, config.GetConfigServer())
 
 			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()
@@ -263,7 +254,7 @@ func Test_updateHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			app := NewApp(storage.NewStorage(), config.GetConfigServer([]string{}))
+			app := NewApp(storage.NewStorage(), config.GetConfigServer())
 
 			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()
@@ -356,7 +347,7 @@ func Test_getOneHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			app := NewApp(storage.NewStorage(), config.GetConfigServer([]string{}))
+			app := NewApp(storage.NewStorage(), config.GetConfigServer())
 
 			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()
@@ -421,7 +412,7 @@ func Test_getAllHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			app := NewApp(storage.NewStorage(), config.GetConfigServer([]string{}))
+			app := NewApp(storage.NewStorage(), config.GetConfigServer())
 
 			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()

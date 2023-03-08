@@ -32,7 +32,7 @@ func NewMetricWriter(filepath string) (*MetricWriter, error) {
 	}, nil
 }
 
-func (mw *MetricWriter) Write(m metric.IMetric) error {
+func (mw *MetricWriter) Write(m metric.Metrics) error {
 	return mw.encoder.Encode(m)
 }
 
@@ -52,11 +52,11 @@ func NewMetricReader(filepath string) (*MetricReader, error) {
 	}, nil
 }
 
-func (mr *MetricReader) Read() (metric.IMetric, error) {
+func (mr *MetricReader) Read() (metric.Metrics, error) {
 	m := metric.Metrics{}
 	err := mr.decoder.Decode(&m)
 	if err != nil {
-		return nil, err
+		return metric.Metrics{}, err
 	}
 
 	return m, nil
@@ -73,7 +73,11 @@ func DumpStorage(ms storage.MemStorage, filepath string) error {
 	}
 
 	for _, m := range ms {
-		if err := mw.Write(m); err != nil {
+		metrics, imErr := metric.NewMetricsFromIMetric(m)
+		if imErr != nil {
+			log.Printf("convert metric %s error: %s", m.Name(), err)
+		}
+		if err := mw.Write(metrics); err != nil {
 			log.Printf("save metric %s error: %s", m.Name(), err)
 		}
 	}
@@ -102,7 +106,12 @@ func RestoreStorage(ms storage.Storage, filepath string) (err error) {
 			break
 		}
 
-		ms.Set(m)
+		im, imErr := m.ToIMetric()
+		if imErr != nil {
+			return imErr
+		}
+
+		ms.Set(im)
 	}
 
 	return

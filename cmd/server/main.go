@@ -16,7 +16,7 @@ import (
 )
 
 func main() {
-	cfg := config.GetConfigServer(os.Args[1:])
+	cfg := config.GetConfigServer()
 	s := storage.NewStorage()
 	app := application.NewApp(s, cfg)
 

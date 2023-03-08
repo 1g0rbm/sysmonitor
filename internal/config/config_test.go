@@ -55,7 +55,7 @@ func TestGetConfigServer(t *testing.T) {
 				}
 			}()
 
-			assert.Equal(t, tt.want, GetConfigServer([]string{}))
+			assert.Equal(t, tt.want, GetConfigServer())
 
 			flag.CommandLine = flag.NewFlagSet("", flag.ExitOnError)
 			flag.CommandLine.Init("", flag.ContinueOnError)
@@ -105,7 +105,7 @@ func TestGetConfigAgent(t *testing.T) {
 				}
 			}()
 
-			assert.Equal(t, tt.want, GetConfigAgent([]string{}))
+			assert.Equal(t, tt.want, GetConfigAgent())
 
 			flag.CommandLine = flag.NewFlagSet("", flag.ExitOnError)
 			flag.CommandLine.Init("", flag.ContinueOnError)

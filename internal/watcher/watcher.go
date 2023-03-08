@@ -109,8 +109,8 @@ func (w Watcher) update(rms runtime.MemStats) {
 	w.gm.update(rms)
 }
 
-func (w Watcher) getAll() []metric.IMetric {
-	var all []metric.IMetric
+func (w Watcher) getAll() []metric.Metrics {
+	var all []metric.Metrics
 
 	for name, value := range w.gm {
 		v := float64(value)
@@ -159,13 +159,13 @@ func (w Watcher) Run(cfg *config.AgentConfig) error {
 					fmt.Println(err)
 					continue
 				}
-				fmt.Printf("Metric %s was sent successfull\n", m.Name())
+				fmt.Printf("Metric %s was sent successfull\n", m.ID)
 			}
 		}
 	}
 }
 
-func sendMetrics(url string, m metric.IMetric) error {
+func sendMetrics(url string, m metric.Metrics) error {
 	client := &http.Client{
 		Timeout: clientTimeout,
 	}

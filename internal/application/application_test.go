@@ -121,7 +121,7 @@ func Test_getOneJsonHandler(t *testing.T) {
 			want: want{
 				contentType: "application/json",
 				statusCode:  http.StatusOK,
-				content:     `{"id":"Alloc","type":"gauge","value":2.01}`,
+				content:     `{"id":"Alloc","type":"gauge","value":390204.95873408683}`,
 			},
 		},
 		{
@@ -154,7 +154,7 @@ func Test_getOneJsonHandler(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		m1, _ := metric.NewMetric("Alloc", metric.GaugeType, "2.01")
+		m1, _ := metric.NewMetric("Alloc", metric.GaugeType, "390204.95873408683")
 		m2, _ := metric.NewMetric("PollCounter", metric.CounterType, "5")
 
 		t.Run(tt.name, func(t *testing.T) {
@@ -301,7 +301,7 @@ func Test_getOneHandler(t *testing.T) {
 			want: want{
 				contentType: "text/plain",
 				statusCode:  http.StatusOK,
-				content:     "2621440.000000",
+				content:     "2621440",
 			},
 		},
 		{
@@ -399,7 +399,7 @@ func Test_getAllHandler(t *testing.T) {
 <h1>List of metrics</h1>
 <ul>
     
-        <li>HeapReleased:2621440.000000</li>
+        <li>HeapReleased:2621440</li>
     
         <li>PollCounter:5</li>
     

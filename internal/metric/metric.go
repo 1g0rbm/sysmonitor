@@ -143,9 +143,9 @@ func (gm GaugeMetric) Value() Gauge {
 }
 
 func (gm GaugeMetric) ValueAsString() string {
-	f := float64(gm.value) - math.Floor(float64(gm.value))
-	str := fmt.Sprintf("%f", gm.value)
-	if f > 0 {
+	fl := float64(gm.value)
+	str := strconv.FormatFloat(fl, 'f', -1, 64)
+	if fl-math.Floor(fl) > 0 {
 		return strings.TrimRight(str, "0")
 	}
 

@@ -1,7 +1,9 @@
 package metric
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 	"strconv"
 	"strings"
@@ -14,6 +16,7 @@ type IMetric interface {
 	Name() string
 	Type() string
 	ValueAsString() string
+	Update(m IMetric) (IMetric, error)
 }
 
 type GaugeMetric struct {
@@ -26,6 +29,13 @@ type CounterMetric struct {
 	value Counter
 }
 
+type Metrics struct {
+	ID    string   `json:"id"`
+	MType string   `json:"type"`
+	Delta *int64   `json:"delta,omitempty"`
+	Value *float64 `json:"value,omitempty"`
+}
+
 const (
 	GaugeType   string = "gauge"
 	CounterType string = "counter"
@@ -35,12 +45,76 @@ var (
 	ErrInvalidValue = fmt.Errorf("invalid value")
 )
 
+func NewMetrics(id string, mType string, delta *int64, value *float64) (Metrics, error) {
+	if mType == CounterType && delta == nil {
+		return Metrics{}, fmt.Errorf("delata can not be nil for a counter type")
+	} else if mType == GaugeType && value == nil {
+		return Metrics{}, fmt.Errorf("value can not be nil for a gauge type")
+	}
+
+	return Metrics{
+		ID:    id,
+		MType: mType,
+		Delta: delta,
+		Value: value,
+	}, nil
+}
+
+func NewMetricsFromIMetric(m IMetric) (Metrics, error) {
+	switch m.Type() {
+	case GaugeType:
+		val, err := strconv.ParseFloat(m.ValueAsString(), 64)
+		if err != nil {
+			return Metrics{}, err
+		}
+		return NewMetrics(m.Name(), m.Type(), nil, &val)
+	case CounterType:
+		val, err := strconv.ParseInt(m.ValueAsString(), 10, 64)
+		if err != nil {
+			return Metrics{}, err
+		}
+		return NewMetrics(m.Name(), m.Type(), &val, nil)
+	default:
+		return Metrics{}, fmt.Errorf("invalid metric type")
+	}
+}
+
+func (m *Metrics) Decode(r io.Reader) error {
+	if err := json.NewDecoder(r).Decode(&m); err != nil {
+		return err
+	}
+
+	if m.MType != GaugeType && m.MType != CounterType {
+		return fmt.Errorf("invalid metric type")
+	}
+
+	return nil
+}
+
+func (m *Metrics) Encode() ([]byte, error) {
+	return json.Marshal(m)
+}
+
+func (m *Metrics) ToIMetric() (IMetric, error) {
+	var value string
+	switch m.MType {
+	case GaugeType:
+		value = fmt.Sprintf("%v", *m.Value)
+	case CounterType:
+		value = fmt.Sprintf("%d", *m.Delta)
+	default:
+		return nil, fmt.Errorf("undefined metric type")
+	}
+
+	return NewMetric(m.ID, m.MType, value)
+}
+
 func NewMetric(name string, mType string, value string) (IMetric, error) {
 	switch mType {
 	case GaugeType:
 		val, err := strconv.ParseFloat(value, 64)
 		if err != nil {
-			return GaugeMetric{}, ErrInvalidValue
+			return nil, ErrInvalidValue
 		}
 		return GaugeMetric{
 			name:  name,
@@ -49,7 +123,7 @@ func NewMetric(name string, mType string, value string) (IMetric, error) {
 	case CounterType:
 		val, err := strconv.ParseInt(value, 10, 64)
 		if err != nil {
-			return CounterMetric{}, ErrInvalidValue
+			return nil, ErrInvalidValue
 		}
 		return CounterMetric{
 			name:  name,
@@ -73,9 +147,9 @@ func (gm GaugeMetric) Value() Gauge {
 }
 
 func (gm GaugeMetric) ValueAsString() string {
-	f := float64(gm.value) - math.Floor(float64(gm.value))
-	str := fmt.Sprintf("%f", gm.value)
-	if f > 0 {
+	fl := float64(gm.value)
+	str := strconv.FormatFloat(fl, 'f', -1, 64)
+	if fl-math.Floor(fl) > 0 {
 		return strings.TrimRight(str, "0")
 	}
 
@@ -90,8 +164,16 @@ func (gm GaugeMetric) NormalizeValue() (Gauge, error) {
 	return Gauge(val), nil
 }
 
-func (gm GaugeMetric) Update(ngm GaugeMetric) GaugeMetric {
-	return ngm
+func (gm GaugeMetric) Update(ngm IMetric) (IMetric, error) {
+	return ngm, nil
+}
+
+func (gm GaugeMetric) Gauge() *Gauge {
+	return &gm.value
+}
+
+func (gm GaugeMetric) Counter() *Counter {
+	return nil
 }
 
 func (cm CounterMetric) Name() string {
@@ -118,8 +200,13 @@ func (cm CounterMetric) NormalizeValue() (Counter, error) {
 	return Counter(val), nil
 }
 
-func (cm CounterMetric) Update(ncm CounterMetric) (IMetric, error) {
-	nv := cm.Value() + ncm.Value()
+func (cm CounterMetric) Update(ncm IMetric) (IMetric, error) {
+	newVal, newValErr := strconv.ParseInt(ncm.ValueAsString(), 10, 64)
+	if newValErr != nil {
+		return nil, newValErr
+	}
+
+	nv := cm.Value() + Counter(newVal)
 	snv := fmt.Sprintf("%d", nv)
 
 	m, err := NewMetric(cm.Name(), cm.Type(), snv)
@@ -128,4 +215,12 @@ func (cm CounterMetric) Update(ncm CounterMetric) (IMetric, error) {
 	}
 
 	return m, nil
+}
+
+func (cm CounterMetric) Gauge() *Gauge {
+	return nil
+}
+
+func (cm CounterMetric) Counter() *Counter {
+	return &cm.value
 }

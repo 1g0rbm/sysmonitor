@@ -1,59 +1,108 @@
 package application
 
 import (
+	"context"
 	"errors"
 	"html/template"
+	"log"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
+	"github.com/1g0rbm/sysmonitor/internal/config"
+	"github.com/1g0rbm/sysmonitor/internal/fs"
 	"github.com/1g0rbm/sysmonitor/internal/metric"
+	localmiddleware "github.com/1g0rbm/sysmonitor/internal/middleware"
 	"github.com/1g0rbm/sysmonitor/internal/storage"
 )
-
-const addr = ":8080"
-
-type Config struct {
-	addr string
-}
 
 type App struct {
 	storage storage.Storage
 	router  *chi.Mux
-	config  Config
+	config  *config.ServerConfig
+	server  *http.Server
 }
 
-func NewConfig() Config {
-	return Config{
-		addr: addr,
-	}
-}
+func NewApp(s storage.Storage, cfg *config.ServerConfig) (app *App) {
+	r := chi.NewRouter()
 
-func NewApp(s storage.Storage) *App {
-	app := &App{
+	app = &App{
 		storage: s,
-		config:  NewConfig(),
-		router:  chi.NewRouter(),
+		config:  cfg,
+		router:  r,
+		server: &http.Server{
+			Addr:    cfg.Address,
+			Handler: r,
+		},
 	}
 
 	app.router.Use(middleware.RequestID)
 	app.router.Use(middleware.RealIP)
 	app.router.Use(middleware.Logger)
 	app.router.Use(middleware.Recoverer)
+	app.router.Use(localmiddleware.Gzip)
 
 	app.router.Get("/", app.getAllMetricsHandler)
 	app.router.Post("/update/{Type}/{Name}/{Value}", app.updateMetricHandler)
 	app.router.Get("/value/{Type}/{Name}", app.getMetricHandler)
 
+	app.router.Post("/update/", app.updateJSONMetricHandler)
+	app.router.Post("/value/", app.getJSONMetricHandler)
+
 	return app
 }
 
-func (app App) Run() error {
-	return http.ListenAndServe(app.config.addr, app.router)
+func (app App) Run() (err error) {
+	if app.config.Restore {
+		err = fs.RestoreStorage(app.storage, app.config.StoreFile)
+		if err != nil {
+			return err
+		}
+		log.Println("Metrics restored from file")
+	}
+
+	if app.config.NeedPeriodicalStore() {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		go func(ctx context.Context) {
+			dumpTicker := time.NewTicker(app.config.StoreInterval)
+			defer dumpTicker.Stop()
+
+			log.Printf("Metrics will be dumped every %d seconds", app.config.StoreInterval)
+
+			for {
+				select {
+				case <-dumpTicker.C:
+					dErr := fs.DumpStorage(app.storage.All(), app.config.StoreFile)
+					if dErr != nil && err == nil {
+						err = dErr
+					}
+				case <-ctx.Done():
+					return
+				}
+			}
+		}(ctx)
+	}
+
+	err = app.server.ListenAndServe()
+
+	return
+}
+
+func (app App) Stop(ctx context.Context) error {
+	dErr := fs.DumpStorage(app.storage.All(), app.config.StoreFile)
+	if dErr != nil {
+		return dErr
+	}
+
+	return app.server.Shutdown(ctx)
 }
 
 func (app App) getAllMetricsHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	t, tErr := template.New("metrics").Parse(AllMetricsTemplate)
 	if tErr != nil {
 		http.Error(w, tErr.Error(), http.StatusInternalServerError)
@@ -64,6 +113,76 @@ func (app App) getAllMetricsHandler(w http.ResponseWriter, r *http.Request) {
 	if err := t.Execute(w, m); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+func (app App) updateJSONMetricHandler(w http.ResponseWriter, r *http.Request) {
+	var m metric.Metrics
+
+	if decodeErr := m.Decode(r.Body); decodeErr != nil {
+		sendJSONResponse(w, http.StatusBadRequest, []byte(decodeErr.Error()))
+		return
+	}
+
+	if m.Delta == nil && m.Value == nil {
+		sendJSONResponse(w, http.StatusBadRequest, []byte("invalid metric value"))
+		return
+	}
+
+	im, convertErr := m.ToIMetric()
+	if convertErr != nil {
+		sendJSONResponse(w, http.StatusBadRequest, []byte(convertErr.Error()))
+		return
+	}
+
+	updM, updErr := app.storage.Update(im)
+	if updErr != nil {
+		sendJSONResponse(w, http.StatusInternalServerError, []byte("update error"))
+		return
+	}
+
+	rm, rmErr := metric.NewMetricsFromIMetric(updM)
+	if rmErr != nil {
+		sendJSONResponse(w, http.StatusInternalServerError, []byte("update error"))
+		return
+	}
+
+	b, err := rm.Encode()
+	if err != nil {
+		sendJSONResponse(w, http.StatusInternalServerError, []byte("error while response creation"))
+		return
+	}
+
+	sendJSONResponse(w, http.StatusOK, b)
+}
+
+func (app App) getJSONMetricHandler(w http.ResponseWriter, r *http.Request) {
+	var rm metric.Metrics
+
+	if decodeErr := rm.Decode(r.Body); decodeErr != nil {
+		sendJSONResponse(w, http.StatusBadRequest, []byte(decodeErr.Error()))
+		return
+	}
+
+	m, err := app.storage.Get(rm.ID)
+	if err != nil && errors.Is(storage.ErrMetricNotFound, err) {
+		sendJSONResponse(w, http.StatusNotFound, []byte(err.Error()))
+		return
+	}
+
+	resM, rmErr := metric.NewMetricsFromIMetric(m)
+	if rmErr != nil {
+		sendJSONResponse(w, http.StatusInternalServerError, []byte("update error"))
+		return
+	}
+
+	b, mErr := resM.Encode()
+	if mErr != nil {
+		sendJSONResponse(w, http.StatusInternalServerError, []byte("internal server error"))
+		log.Fatalf("Metric marshaling error: %s", mErr)
+		return
+	}
+
+	sendJSONResponse(w, http.StatusOK, b)
 }
 
 func (app App) updateMetricHandler(w http.ResponseWriter, r *http.Request) {
@@ -88,7 +207,7 @@ func (app App) updateMetricHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updErr := app.storage.Update(m)
+	_, updErr := app.storage.Update(m)
 	if updErr != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 	}
@@ -120,4 +239,12 @@ func (app App) getMetricHandler(w http.ResponseWriter, r *http.Request) {
 
 func (app App) getRouter() chi.Router {
 	return app.router
+}
+
+func sendJSONResponse(w http.ResponseWriter, status int, body []byte) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	if _, err := w.Write(body); err != nil {
+		log.Fatalf("Error while sending response: %s", err)
+	}
 }

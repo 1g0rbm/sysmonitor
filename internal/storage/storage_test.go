@@ -9,8 +9,8 @@ import (
 )
 
 func TestRun(t *testing.T) {
-	m1, _ := metric.NewMetric("GCSys", "gauge", "2621440.000000")
-	m2, _ := metric.NewMetric("PollCounter", "counter", "10")
+	m1, _ := metric.NewMetric("GCSys", metric.GaugeType, "2621440.000000")
+	m2, _ := metric.NewMetric("PollCounter", metric.CounterType, "10")
 
 	tests := []struct {
 		name string
@@ -44,14 +44,14 @@ func TestRun(t *testing.T) {
 			assert.Len(t, ms, 2)
 			assert.Equal(t, tt.data, ms)
 
-			gUpdErr := s.Update(tt.data["GCSys"])
+			_, gUpdErr := s.Update(tt.data["GCSys"])
 			assert.Nil(t, gUpdErr)
 
 			m4, err4 := s.Get("GCSys")
 			assert.Nil(t, err4)
 			assert.Equal(t, tt.data["GCSys"], m4)
 
-			cUpdErr := s.Update(tt.data["PollCounter"])
+			_, cUpdErr := s.Update(tt.data["PollCounter"])
 			assert.Nil(t, cUpdErr)
 
 			m5, err5 := s.Get("PollCounter")

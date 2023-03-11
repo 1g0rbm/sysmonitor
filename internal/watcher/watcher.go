@@ -1,6 +1,7 @@
 package watcher
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -10,12 +11,12 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/1g0rbm/sysmonitor/internal/config"
 	"github.com/1g0rbm/sysmonitor/internal/metric"
 )
 
 const (
 	scheme         string = "http"
-	host           string = "localhost:8080"
 	clientTimeout         = 10 * time.Second
 	requestTimeout        = 5 * time.Second
 )
@@ -56,7 +57,7 @@ func (gm gMetrics) update(m runtime.MemStats) {
 type cMetrics map[string]metric.Counter
 
 func (cm cMetrics) update() {
-	cm["PollCounter"] += 1
+	cm["PollCount"] += 1
 }
 
 type Watcher struct {
@@ -97,7 +98,7 @@ func NewWatcher() Watcher {
 			"RandomValue":   0,
 		},
 		cm: cMetrics{
-			"PollCounter": 0,
+			"PollCount": 0,
 		},
 	}
 }
@@ -107,37 +108,39 @@ func (w Watcher) update(rms runtime.MemStats) {
 	w.gm.update(rms)
 }
 
-func (w Watcher) getAll() []metric.IMetric {
-	var all []metric.IMetric
+func (w Watcher) getAll() []metric.Metrics {
+	var all []metric.Metrics
 
 	for name, value := range w.gm {
-		m, _ := metric.NewMetric(name, metric.GaugeType, fmt.Sprintf("%f", value))
+		v := float64(value)
+		m, _ := metric.NewMetrics(name, metric.GaugeType, nil, &v)
 		all = append(all, m)
 	}
 
 	for name, value := range w.cm {
-		m, _ := metric.NewMetric(name, metric.CounterType, fmt.Sprintf("%d", value))
+		v := int64(value)
+		m, _ := metric.NewMetrics(name, metric.CounterType, &v, nil)
 		all = append(all, m)
 	}
 
 	return all
 }
 
-func (w Watcher) Run(updMetricsDuration int, sendMetricsDuration int) error {
-	if updMetricsDuration >= sendMetricsDuration {
+func (w Watcher) Run(cfg *config.AgentConfig) error {
+	if cfg.PollInterval >= cfg.ReportInterval {
 		errMsg := fmt.Sprintf(
 			"update duration (%d) should be less than send duration (%d)",
-			updMetricsDuration,
-			sendMetricsDuration)
+			cfg.PollInterval,
+			cfg.ReportInterval)
 		return errors.New(errMsg)
 	}
 
-	updMetricsTicker := time.NewTicker(time.Second * time.Duration(updMetricsDuration))
-	sendMetricsTicker := time.NewTicker(time.Second * time.Duration(sendMetricsDuration))
+	updMetricsTicker := time.NewTicker(cfg.PollInterval)
+	sendMetricsTicker := time.NewTicker(cfg.ReportInterval)
 
 	updURL := url.URL{
 		Scheme: scheme,
-		Host:   host,
+		Host:   cfg.Address,
 	}
 
 	var rms runtime.MemStats
@@ -149,19 +152,19 @@ func (w Watcher) Run(updMetricsDuration int, sendMetricsDuration int) error {
 			w.update(rms)
 		case <-sendMetricsTicker.C:
 			for _, m := range w.getAll() {
-				updURL.Path = fmt.Sprintf("/update/%s/%v/%s", m.Type(), m.Name(), m.ValueAsString())
-				err := sendMetrics(updURL.String())
+				updURL.Path = "/update/"
+				err := sendMetrics(updURL.String(), m)
 				if err != nil {
 					fmt.Println(err)
 					continue
 				}
-				fmt.Printf("Metric %s was sent successfull\n", m.Name())
+				fmt.Printf("Metric %s was sent successfull\n", m.ID)
 			}
 		}
 	}
 }
 
-func sendMetrics(url string) error {
+func sendMetrics(url string, m metric.Metrics) error {
 	client := &http.Client{
 		Timeout: clientTimeout,
 	}
@@ -169,15 +172,20 @@ func sendMetrics(url string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
 	defer cancel()
 
-	request, err := http.NewRequest("POST", url, nil)
+	b, mErr := m.Encode()
+	if mErr != nil {
+		return mErr
+	}
+
+	request, err := http.NewRequest("POST", url, bytes.NewBuffer(b))
 	if err != nil {
 		return err
 	}
-	request.Header.Add("Content-Type", "text/plain")
+	request.Header.Add("Content-Type", "application/json")
 
 	response, rErr := client.Do(request.WithContext(ctx))
 	if rErr != nil {
-		fmt.Println(err)
+		return rErr
 	}
 
 	if response.StatusCode != http.StatusOK {

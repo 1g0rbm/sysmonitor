@@ -64,19 +64,27 @@ func (app App) Run() (err error) {
 	}
 
 	if app.config.NeedPeriodicalStore() {
-		go func() {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		go func(ctx context.Context) {
 			dumpTicker := time.NewTicker(app.config.StoreInterval)
 			defer dumpTicker.Stop()
 
 			log.Printf("Metrics will be dumped every %d seconds", app.config.StoreInterval)
 
-			for range dumpTicker.C {
-				dErr := fs.DumpStorage(app.storage.All(), app.config.StoreFile)
-				if dErr != nil && err == nil {
-					err = dErr
+			for {
+				select {
+				case <-dumpTicker.C:
+					dErr := fs.DumpStorage(app.storage.All(), app.config.StoreFile)
+					if dErr != nil && err == nil {
+						err = dErr
+					}
+				case <-ctx.Done():
+					return
 				}
 			}
-		}()
+		}(ctx)
 	}
 
 	err = app.server.ListenAndServe()

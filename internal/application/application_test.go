@@ -147,7 +147,7 @@ func Test_updateJsonWithSignHandler(t *testing.T) {
 			},
 		},
 		{
-			name:    "invalid value update counter metric test",
+			name:    "invalid sign update counter metric test",
 			path:    "/update/",
 			method:  http.MethodPost,
 			signKey: key + "qwerty",
@@ -254,6 +254,76 @@ func Test_getOneJsonHandler(t *testing.T) {
 			s.Set(m1)
 			s.Set(m2)
 			app := NewApp(s, config.GetConfigServer())
+
+			ts := httptest.NewServer(app.getRouter())
+			defer ts.Close()
+
+			resp, body := testJSONRequest(t, ts, tt.method, tt.path, tt.metric)
+			defer resp.Body.Close()
+
+			assert.Equal(t, tt.want.statusCode, resp.StatusCode)
+			assert.Equal(t, tt.want.contentType, resp.Header.Get("Content-Type"))
+			assert.Equal(t, tt.want.content, body)
+
+			flag.CommandLine = flag.NewFlagSet("", flag.ExitOnError)
+			flag.CommandLine.Init("", flag.ContinueOnError)
+		})
+	}
+}
+
+func Test_getOneJsonWithSignHandler(t *testing.T) {
+	type want struct {
+		contentType string
+		statusCode  int
+		content     string
+	}
+	tests := []struct {
+		name   string
+		path   string
+		method string
+		metric metric.Metrics
+		want   want
+	}{
+		{
+			name:   "success get gauge metric test",
+			path:   "/value/",
+			method: http.MethodPost,
+			metric: metric.Metrics{
+				ID:    "Alloc",
+				MType: metric.GaugeType,
+			},
+			want: want{
+				contentType: "application/json",
+				statusCode:  http.StatusOK,
+				content:     `{"id":"Alloc","type":"gauge","value":390204.95873408683,"hash":"8ff879de5f1f5883e17871c056c5553fc46d917864f7e7956fb91f39a140524d"}`,
+			},
+		},
+		{
+			name:   "success get counter metric test",
+			path:   "/value/",
+			method: http.MethodPost,
+			metric: metric.Metrics{
+				ID:    "PollCounter",
+				MType: metric.CounterType,
+			},
+			want: want{
+				contentType: "application/json",
+				statusCode:  http.StatusOK,
+				content:     `{"id":"PollCounter","type":"counter","delta":5,"hash":"dc8a0047d444026352049092c0a7463a0526a7bdb7514929b73f6e4318b6b22f"}`,
+			},
+		},
+	}
+	for _, tt := range tests {
+		m1, _ := metric.NewMetric("Alloc", metric.GaugeType, "390204.95873408683")
+		m2, _ := metric.NewMetric("PollCounter", metric.CounterType, "5")
+
+		t.Run(tt.name, func(t *testing.T) {
+			s := storage.NewStorage()
+			s.Set(m1)
+			s.Set(m2)
+			cfg := config.GetConfigServer()
+			cfg.Key = key
+			app := NewApp(s, cfg)
 
 			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()

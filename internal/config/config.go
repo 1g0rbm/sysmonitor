@@ -64,7 +64,7 @@ func (sc ServerConfig) NeedPeriodicalStore() bool {
 	return sc.StoreInterval > 0 && sc.StoreFile != ""
 }
 
-func (sc ServerConfig) NeedSign() bool {
+func (sc ServerConfig) NeedCheckSign() bool {
 	return sc.Key != ""
 }
 

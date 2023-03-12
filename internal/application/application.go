@@ -128,6 +128,18 @@ func (app App) updateJSONMetricHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if app.config.NeedCheckSign() {
+		ok, signErr := m.CheckSign(app.config.Key)
+		if signErr != nil {
+			sendJSONResponse(w, http.StatusInternalServerError, []byte("check sign error"))
+			return
+		}
+		if !ok {
+			sendJSONResponse(w, http.StatusBadRequest, []byte("wrong sign"))
+			return
+		}
+	}
+
 	im, convertErr := m.ToIMetric()
 	if convertErr != nil {
 		sendJSONResponse(w, http.StatusBadRequest, []byte(convertErr.Error()))

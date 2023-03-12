@@ -102,6 +102,25 @@ func (m *Metrics) Sign(key string) error {
 	return nil
 }
 
+func (m *Metrics) CheckSign(key string) (bool, error) {
+	var s string
+	switch m.MType {
+	case GaugeType:
+		s = fmt.Sprintf("%s:%s:%f", m.ID, m.MType, *m.Value)
+	case CounterType:
+		s = fmt.Sprintf("%s:%s:%d", m.ID, m.MType, *m.Delta)
+	default:
+		return false, fmt.Errorf("invalid metric type %s", m.MType)
+	}
+
+	h := hmac.New(sha256.New, []byte(key))
+	h.Write([]byte(s))
+
+	hash := hex.EncodeToString(h.Sum(nil))
+
+	return m.Hash == hash, nil
+}
+
 func (m *Metrics) Decode(r io.Reader) error {
 	if err := json.NewDecoder(r).Decode(&m); err != nil {
 		return err

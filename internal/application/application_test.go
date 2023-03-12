@@ -16,6 +16,8 @@ import (
 	"github.com/1g0rbm/sysmonitor/internal/storage"
 )
 
+const key = "qwerty"
+
 func Test_updateJsonHandler(t *testing.T) {
 	type want struct {
 		contentType string
@@ -82,6 +84,96 @@ func Test_updateJsonHandler(t *testing.T) {
 
 			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()
+
+			resp, body := testJSONRequest(t, ts, tt.method, tt.path, tt.metric)
+			defer resp.Body.Close()
+
+			assert.Equal(t, tt.want.statusCode, resp.StatusCode)
+			assert.Equal(t, tt.want.contentType, resp.Header.Get("Content-Type"))
+			assert.Equal(t, tt.want.content, body)
+
+			flag.CommandLine = flag.NewFlagSet("", flag.ExitOnError)
+			flag.CommandLine.Init("", flag.ContinueOnError)
+		})
+	}
+}
+
+func Test_updateJsonWithSignHandler(t *testing.T) {
+	type want struct {
+		contentType string
+		statusCode  int
+		content     string
+	}
+	fVal := 2.01
+	iVal := int64(5)
+	tests := []struct {
+		name    string
+		path    string
+		method  string
+		signKey string
+		metric  metric.Metrics
+		want    want
+	}{
+		{
+			name:    "success update counter metric test",
+			path:    "/update/",
+			method:  http.MethodPost,
+			signKey: key,
+			metric: metric.Metrics{
+				ID:    "PollCounter",
+				MType: metric.CounterType,
+				Delta: &iVal,
+			},
+			want: want{
+				contentType: "application/json",
+				statusCode:  http.StatusOK,
+				content:     `{"id":"PollCounter","type":"counter","delta":5}`,
+			},
+		},
+		{
+			name:    "success update gauge metric test",
+			path:    "/update/",
+			method:  http.MethodPost,
+			signKey: key,
+			metric: metric.Metrics{
+				ID:    "Alloc",
+				MType: metric.GaugeType,
+				Value: &fVal,
+			},
+			want: want{
+				contentType: "application/json",
+				statusCode:  http.StatusOK,
+				content:     `{"id":"Alloc","type":"gauge","value":2.01}`,
+			},
+		},
+		{
+			name:    "invalid value update counter metric test",
+			path:    "/update/",
+			method:  http.MethodPost,
+			signKey: key + "qwerty",
+			metric: metric.Metrics{
+				ID:    "Alloc",
+				MType: metric.GaugeType,
+				Value: &fVal,
+			},
+			want: want{
+				contentType: "application/json",
+				statusCode:  http.StatusBadRequest,
+				content:     "wrong sign",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := config.GetConfigServer()
+			cfg.Key = key
+			app := NewApp(storage.NewStorage(), cfg)
+
+			ts := httptest.NewServer(app.getRouter())
+			defer ts.Close()
+
+			signErr := tt.metric.Sign(tt.signKey)
+			require.Nil(t, signErr)
 
 			resp, body := testJSONRequest(t, ts, tt.method, tt.path, tt.metric)
 			defer resp.Body.Close()

@@ -127,7 +127,7 @@ func Test_updateJsonWithSignHandler(t *testing.T) {
 			want: want{
 				contentType: "application/json",
 				statusCode:  http.StatusOK,
-				content:     `{"id":"PollCounter","type":"counter","delta":5}`,
+				content:     `{"id":"PollCounter","type":"counter","delta":5,"hash":"dc8a0047d444026352049092c0a7463a0526a7bdb7514929b73f6e4318b6b22f"}`,
 			},
 		},
 		{
@@ -143,7 +143,7 @@ func Test_updateJsonWithSignHandler(t *testing.T) {
 			want: want{
 				contentType: "application/json",
 				statusCode:  http.StatusOK,
-				content:     `{"id":"Alloc","type":"gauge","value":2.01}`,
+				content:     `{"id":"Alloc","type":"gauge","value":2.01,"hash":"0629d877cb3e2e6e45ad6b945fdd6894be7b98e308e7ac1600e2f24cb0d37775"}`,
 			},
 		},
 		{
@@ -173,6 +173,7 @@ func Test_updateJsonWithSignHandler(t *testing.T) {
 			defer ts.Close()
 
 			signErr := tt.metric.Sign(tt.signKey)
+
 			require.Nil(t, signErr)
 
 			resp, body := testJSONRequest(t, ts, tt.method, tt.path, tt.metric)

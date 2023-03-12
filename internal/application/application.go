@@ -158,6 +158,10 @@ func (app App) updateJSONMetricHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if app.config.NeedCheckSign() {
+		_ = rm.Sign(app.config.Key)
+	}
+
 	b, err := rm.Encode()
 	if err != nil {
 		sendJSONResponse(w, http.StatusInternalServerError, []byte("error while response creation"))

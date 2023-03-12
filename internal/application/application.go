@@ -159,7 +159,10 @@ func (app App) updateJSONMetricHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if app.config.NeedCheckSign() {
-		_ = rm.Sign(app.config.Key)
+		if rmSignErr := rm.Sign(app.config.Key); rmSignErr != nil {
+			sendJSONResponse(w, http.StatusInternalServerError, []byte("check sign error"))
+			return
+		}
 	}
 
 	b, err := rm.Encode()
@@ -193,6 +196,13 @@ func (app App) getJSONMetricHandler(w http.ResponseWriter, r *http.Request) {
 
 	if app.config.NeedCheckSign() {
 		_ = resM.Sign(app.config.Key)
+	}
+
+	if app.config.NeedCheckSign() {
+		if resSignErr := resM.Sign(app.config.Key); resSignErr != nil {
+			sendJSONResponse(w, http.StatusInternalServerError, []byte("check sign error"))
+			return
+		}
 	}
 
 	b, mErr := resM.Encode()

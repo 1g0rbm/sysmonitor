@@ -108,22 +108,34 @@ func (w Watcher) update(rms runtime.MemStats) {
 	w.gm.update(rms)
 }
 
-func (w Watcher) getAll() []metric.Metrics {
+func (w Watcher) getAll(cfg *config.AgentConfig) ([]metric.Metrics, error) {
 	var all []metric.Metrics
 
 	for name, value := range w.gm {
 		v := float64(value)
 		m, _ := metric.NewMetrics(name, metric.GaugeType, nil, &v)
+		if cfg.NeedSign() {
+			sgnErr := m.Sign(cfg.Key)
+			if sgnErr != nil {
+				return nil, sgnErr
+			}
+		}
 		all = append(all, m)
 	}
 
 	for name, value := range w.cm {
 		v := int64(value)
 		m, _ := metric.NewMetrics(name, metric.CounterType, &v, nil)
+		if cfg.NeedSign() {
+			sgnErr := m.Sign(cfg.Key)
+			if sgnErr != nil {
+				return nil, sgnErr
+			}
+		}
 		all = append(all, m)
 	}
 
-	return all
+	return all, nil
 }
 
 func (w Watcher) Run(cfg *config.AgentConfig) error {
@@ -151,7 +163,11 @@ func (w Watcher) Run(cfg *config.AgentConfig) error {
 			runtime.ReadMemStats(&rms)
 			w.update(rms)
 		case <-sendMetricsTicker.C:
-			for _, m := range w.getAll() {
+			am, amErr := w.getAll(cfg)
+			if amErr != nil {
+				fmt.Printf("Error while create list to send report: %s", amErr)
+			}
+			for _, m := range am {
 				updURL.Path = "/update/"
 				err := sendMetrics(updURL.String(), m)
 				if err != nil {

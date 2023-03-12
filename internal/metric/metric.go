@@ -1,6 +1,9 @@
 package metric
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -34,6 +37,7 @@ type Metrics struct {
 	MType string   `json:"type"`
 	Delta *int64   `json:"delta,omitempty"`
 	Value *float64 `json:"value,omitempty"`
+	Hash  string   `json:"hash,omitempty"`
 }
 
 const (
@@ -77,6 +81,44 @@ func NewMetricsFromIMetric(m IMetric) (Metrics, error) {
 	default:
 		return Metrics{}, fmt.Errorf("invalid metric type")
 	}
+}
+
+func (m *Metrics) Sign(key string) error {
+	var s string
+	switch m.MType {
+	case GaugeType:
+		s = fmt.Sprintf("%s:%s:%f", m.ID, m.MType, *m.Value)
+	case CounterType:
+		s = fmt.Sprintf("%s:%s:%d", m.ID, m.MType, *m.Delta)
+	default:
+		return fmt.Errorf("invalid metric type %s", m.MType)
+	}
+
+	h := hmac.New(sha256.New, []byte(key))
+	h.Write([]byte(s))
+
+	m.Hash = hex.EncodeToString(h.Sum(nil))
+
+	return nil
+}
+
+func (m *Metrics) CheckSign(key string) (bool, error) {
+	var s string
+	switch m.MType {
+	case GaugeType:
+		s = fmt.Sprintf("%s:%s:%f", m.ID, m.MType, *m.Value)
+	case CounterType:
+		s = fmt.Sprintf("%s:%s:%d", m.ID, m.MType, *m.Delta)
+	default:
+		return false, fmt.Errorf("invalid metric type %s", m.MType)
+	}
+
+	h := hmac.New(sha256.New, []byte(key))
+	h.Write([]byte(s))
+
+	hash := hex.EncodeToString(h.Sum(nil))
+
+	return m.Hash == hash, nil
 }
 
 func (m *Metrics) Decode(r io.Reader) error {

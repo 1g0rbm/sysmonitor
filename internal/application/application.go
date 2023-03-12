@@ -128,6 +128,18 @@ func (app App) updateJSONMetricHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if app.config.NeedCheckSign() {
+		ok, signErr := m.CheckSign(app.config.Key)
+		if signErr != nil {
+			sendJSONResponse(w, http.StatusInternalServerError, []byte("check sign error"))
+			return
+		}
+		if !ok {
+			sendJSONResponse(w, http.StatusBadRequest, []byte("wrong sign"))
+			return
+		}
+	}
+
 	im, convertErr := m.ToIMetric()
 	if convertErr != nil {
 		sendJSONResponse(w, http.StatusBadRequest, []byte(convertErr.Error()))
@@ -144,6 +156,13 @@ func (app App) updateJSONMetricHandler(w http.ResponseWriter, r *http.Request) {
 	if rmErr != nil {
 		sendJSONResponse(w, http.StatusInternalServerError, []byte("update error"))
 		return
+	}
+
+	if app.config.NeedCheckSign() {
+		if rmSignErr := rm.Sign(app.config.Key); rmSignErr != nil {
+			sendJSONResponse(w, http.StatusInternalServerError, []byte("check sign error"))
+			return
+		}
 	}
 
 	b, err := rm.Encode()
@@ -173,6 +192,17 @@ func (app App) getJSONMetricHandler(w http.ResponseWriter, r *http.Request) {
 	if rmErr != nil {
 		sendJSONResponse(w, http.StatusInternalServerError, []byte("update error"))
 		return
+	}
+
+	if app.config.NeedCheckSign() {
+		_ = resM.Sign(app.config.Key)
+	}
+
+	if app.config.NeedCheckSign() {
+		if resSignErr := resM.Sign(app.config.Key); resSignErr != nil {
+			sendJSONResponse(w, http.StatusInternalServerError, []byte("check sign error"))
+			return
+		}
 	}
 
 	b, mErr := resM.Encode()

@@ -14,6 +14,7 @@ const (
 	defaultStoreInterval  = 300 * time.Second
 	defaultStoreFile      = "/tmp/devops-metrics-db.json"
 	defaultRestore        = true
+	defaultKey            = ""
 )
 
 var (
@@ -23,6 +24,7 @@ var (
 	storeInterval  time.Duration
 	storeFile      string
 	restore        bool
+	key            string
 )
 
 type ServerConfig struct {
@@ -30,12 +32,14 @@ type ServerConfig struct {
 	StoreInterval time.Duration
 	StoreFile     string
 	Restore       bool
+	Key           string
 }
 
 type AgentConfig struct {
 	Address        string
 	ReportInterval time.Duration
 	PollInterval   time.Duration
+	Key            string
 }
 
 func GetConfigServer() *ServerConfig {
@@ -43,6 +47,7 @@ func GetConfigServer() *ServerConfig {
 	flag.DurationVar(&storeInterval, "i", defaultStoreInterval, "-i=<VALUE>")
 	flag.StringVar(&storeFile, "f", defaultStoreFile, "-f=<VALUE")
 	flag.BoolVar(&restore, "r", defaultRestore, "-r=<VALUE>")
+	flag.StringVar(&key, "k", defaultKey, "-k=<KEY>")
 
 	flag.Parse()
 
@@ -51,6 +56,7 @@ func GetConfigServer() *ServerConfig {
 		StoreInterval: getEnvDuration("STORE_INTERVAL", storeInterval),
 		StoreFile:     getEnvString("STORE_FILE", storeFile),
 		Restore:       getEnvBool("RESTORE", restore),
+		Key:           getEnvString("KEY", key),
 	}
 }
 
@@ -58,10 +64,15 @@ func (sc ServerConfig) NeedPeriodicalStore() bool {
 	return sc.StoreInterval > 0 && sc.StoreFile != ""
 }
 
+func (sc ServerConfig) NeedSign() bool {
+	return sc.Key != ""
+}
+
 func GetConfigAgent() *AgentConfig {
 	flag.StringVar(&address, "a", defaultAddress, "-a=<VALUE>")
 	flag.DurationVar(&reportInterval, "r", defaultReportInterval, "-r=<VALUE>")
 	flag.DurationVar(&pollInterval, "p", defaultPollInterval, "-p=<VALUE>")
+	flag.StringVar(&key, "k", defaultKey, "-k=<KEY>")
 
 	flag.Parse()
 
@@ -69,7 +80,12 @@ func GetConfigAgent() *AgentConfig {
 		Address:        getEnvString("ADDRESS", address),
 		ReportInterval: getEnvDuration("REPORT_INTERVAL", reportInterval),
 		PollInterval:   getEnvDuration("POLL_INTERVAL", pollInterval),
+		Key:            getEnvString("KEY", key),
 	}
+}
+
+func (ac AgentConfig) NeedSign() bool {
+	return ac.Key != ""
 }
 
 func getEnvString(name string, defaultValue string) string {

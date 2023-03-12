@@ -191,6 +191,10 @@ func (app App) getJSONMetricHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if app.config.NeedCheckSign() {
+		_ = resM.Sign(app.config.Key)
+	}
+
 	b, mErr := resM.Encode()
 	if mErr != nil {
 		sendJSONResponse(w, http.StatusInternalServerError, []byte("internal server error"))

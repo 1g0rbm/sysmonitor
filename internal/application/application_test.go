@@ -80,7 +80,7 @@ func Test_updateJsonHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			app := NewApp(storage.NewStorage(), config.GetConfigServer(), nil)
+			app := NewApp(storage.NewMemStorage(), config.GetConfigServer())
 
 			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()
@@ -167,7 +167,7 @@ func Test_updateJsonWithSignHandler(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := config.GetConfigServer()
 			cfg.Key = key
-			app := NewApp(storage.NewStorage(), cfg, nil)
+			app := NewApp(storage.NewMemStorage(), cfg)
 
 			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()
@@ -250,10 +250,10 @@ func Test_getOneJsonHandler(t *testing.T) {
 		m2, _ := metric.NewMetric("PollCounter", metric.CounterType, "5")
 
 		t.Run(tt.name, func(t *testing.T) {
-			s := storage.NewStorage()
+			s := storage.NewMemStorage()
 			s.Set(m1)
 			s.Set(m2)
-			app := NewApp(s, config.GetConfigServer(), nil)
+			app := NewApp(s, config.GetConfigServer())
 
 			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()
@@ -318,12 +318,12 @@ func Test_getOneJsonWithSignHandler(t *testing.T) {
 		m2, _ := metric.NewMetric("PollCounter", metric.CounterType, "5")
 
 		t.Run(tt.name, func(t *testing.T) {
-			s := storage.NewStorage()
+			s := storage.NewMemStorage()
 			s.Set(m1)
 			s.Set(m2)
 			cfg := config.GetConfigServer()
 			cfg.Key = key
-			app := NewApp(s, cfg, nil)
+			app := NewApp(s, cfg)
 
 			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()
@@ -416,7 +416,7 @@ func Test_updateHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			app := NewApp(storage.NewStorage(), config.GetConfigServer(), nil)
+			app := NewApp(storage.NewMemStorage(), config.GetConfigServer())
 
 			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()
@@ -509,7 +509,7 @@ func Test_getOneHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			app := NewApp(storage.NewStorage(), config.GetConfigServer(), nil)
+			app := NewApp(storage.NewMemStorage(), config.GetConfigServer())
 
 			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()
@@ -574,7 +574,7 @@ func Test_getAllHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			app := NewApp(storage.NewStorage(), config.GetConfigServer(), nil)
+			app := NewApp(storage.NewMemStorage(), config.GetConfigServer())
 
 			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()

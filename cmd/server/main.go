@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"log"
 	"net/http"
@@ -18,23 +17,27 @@ import (
 	"github.com/1g0rbm/sysmonitor/internal/storage"
 )
 
+var (
+	s     storage.Storage
+	dbErr error
+)
+
 func main() {
 	cfg := config.GetConfigServer()
 
-	db, dbErr := sql.Open("pgx", cfg.DBDsn)
-	if dbErr != nil {
-		log.Fatal(dbErr)
+	switch cfg.GetStorageDriverName() {
+	case storage.DBStorageType:
+		s, dbErr = storage.NewDBStorage("pgx", cfg.DBDsn)
+		if dbErr != nil {
+			log.Fatalf("Create DB storage error: %s", dbErr)
+		}
+	case storage.MemStorageType:
+		s = storage.NewMemStorage()
+	default:
+		log.Fatalf("Invalid storage type %d", cfg.GetStorageDriverName())
 	}
 
-	defer func(db *sql.DB) {
-		err := db.Close()
-		if err != nil {
-			log.Fatal(err)
-		}
-	}(db)
-
-	s := storage.NewStorage()
-	app := application.NewApp(s, cfg, db)
+	app := application.NewApp(s, cfg)
 
 	go func() {
 		if err := app.Run(); err != nil && !errors.Is(err, http.ErrServerClosed) {

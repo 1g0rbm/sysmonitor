@@ -23,7 +23,7 @@ func TestRun(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := NewStorage()
+			s := NewMemStorage()
 			for _, m := range tt.data {
 				s.Set(m)
 			}

@@ -24,6 +24,7 @@ func TestGetConfigServer(t *testing.T) {
 				"STORE_FILE":     "/tmp/metrics-db.json",
 				"RESTORE":        "0",
 				"KEY":            "qwerty",
+				"DATABASE_DSN":   "postgresql://user:pass@host/db",
 			},
 			want: &ServerConfig{
 				Address:       "127.0.0.1:8000",
@@ -31,6 +32,7 @@ func TestGetConfigServer(t *testing.T) {
 				StoreFile:     "/tmp/metrics-db.json",
 				Restore:       false,
 				Key:           "qwerty",
+				DbDsn:         "postgresql://user:pass@host/db",
 			},
 		},
 		{
@@ -42,6 +44,7 @@ func TestGetConfigServer(t *testing.T) {
 				StoreFile:     "/tmp/devops-metrics-db.json",
 				Restore:       true,
 				Key:           "",
+				DbDsn:         "",
 			},
 		},
 	}

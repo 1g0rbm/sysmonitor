@@ -15,6 +15,7 @@ const (
 	defaultStoreFile      = "/tmp/devops-metrics-db.json"
 	defaultRestore        = true
 	defaultKey            = ""
+	defaultDbDsn          = ""
 )
 
 var (
@@ -25,6 +26,7 @@ var (
 	storeFile      string
 	restore        bool
 	key            string
+	dbDsn          string
 )
 
 type ServerConfig struct {
@@ -33,6 +35,7 @@ type ServerConfig struct {
 	StoreFile     string
 	Restore       bool
 	Key           string
+	DbDsn         string
 }
 
 type AgentConfig struct {
@@ -48,6 +51,7 @@ func GetConfigServer() *ServerConfig {
 	flag.StringVar(&storeFile, "f", defaultStoreFile, "-f=<VALUE")
 	flag.BoolVar(&restore, "r", defaultRestore, "-r=<VALUE>")
 	flag.StringVar(&key, "k", defaultKey, "-k=<KEY>")
+	flag.StringVar(&dbDsn, "d", defaultDbDsn, "-k=<DATABASE_DSN>")
 
 	flag.Parse()
 
@@ -57,6 +61,7 @@ func GetConfigServer() *ServerConfig {
 		StoreFile:     getEnvString("STORE_FILE", storeFile),
 		Restore:       getEnvBool("RESTORE", restore),
 		Key:           getEnvString("KEY", key),
+		DbDsn:         getEnvString("DATABASE_DSN", dbDsn),
 	}
 }
 

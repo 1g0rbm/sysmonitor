@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"log"
 	"net/http"
@@ -10,6 +11,8 @@ import (
 	"syscall"
 	"time"
 
+	_ "github.com/jackc/pgx/v5/stdlib"
+
 	"github.com/1g0rbm/sysmonitor/internal/application"
 	"github.com/1g0rbm/sysmonitor/internal/config"
 	"github.com/1g0rbm/sysmonitor/internal/storage"
@@ -17,8 +20,21 @@ import (
 
 func main() {
 	cfg := config.GetConfigServer()
+
+	db, dbErr := sql.Open("pgx", cfg.DbDsn)
+	if dbErr != nil {
+		log.Fatal(dbErr)
+	}
+
+	defer func(db *sql.DB) {
+		err := db.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}(db)
+
 	s := storage.NewStorage()
-	app := application.NewApp(s, cfg)
+	app := application.NewApp(s, cfg, db)
 
 	go func() {
 		if err := app.Run(); err != nil && !errors.Is(err, http.ErrServerClosed) {

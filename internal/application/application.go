@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"html/template"
 	"log"
@@ -23,9 +24,10 @@ type App struct {
 	router  *chi.Mux
 	config  *config.ServerConfig
 	server  *http.Server
+	db      *sql.DB
 }
 
-func NewApp(s storage.Storage, cfg *config.ServerConfig) (app *App) {
+func NewApp(s storage.Storage, cfg *config.ServerConfig, db *sql.DB) (app *App) {
 	r := chi.NewRouter()
 
 	app = &App{
@@ -36,6 +38,7 @@ func NewApp(s storage.Storage, cfg *config.ServerConfig) (app *App) {
 			Addr:    cfg.Address,
 			Handler: r,
 		},
+		db: db,
 	}
 
 	app.router.Use(middleware.RequestID)
@@ -50,6 +53,8 @@ func NewApp(s storage.Storage, cfg *config.ServerConfig) (app *App) {
 
 	app.router.Post("/update/", app.updateJSONMetricHandler)
 	app.router.Post("/value/", app.getJSONMetricHandler)
+
+	app.router.Get("/ping", app.dbHealthCheckHandler)
 
 	return app
 }
@@ -99,6 +104,17 @@ func (app App) Stop(ctx context.Context) error {
 	}
 
 	return app.server.Shutdown(ctx)
+}
+
+func (app App) dbHealthCheckHandler(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+	if err := app.db.PingContext(ctx); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(http.StatusOK)
 }
 
 func (app App) getAllMetricsHandler(w http.ResponseWriter, r *http.Request) {

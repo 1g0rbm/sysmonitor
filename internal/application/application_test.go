@@ -80,7 +80,7 @@ func Test_updateJsonHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			app := NewApp(storage.NewStorage(), config.GetConfigServer())
+			app := NewApp(storage.NewStorage(), config.GetConfigServer(), nil)
 
 			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()
@@ -167,7 +167,7 @@ func Test_updateJsonWithSignHandler(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := config.GetConfigServer()
 			cfg.Key = key
-			app := NewApp(storage.NewStorage(), cfg)
+			app := NewApp(storage.NewStorage(), cfg, nil)
 
 			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()
@@ -253,7 +253,7 @@ func Test_getOneJsonHandler(t *testing.T) {
 			s := storage.NewStorage()
 			s.Set(m1)
 			s.Set(m2)
-			app := NewApp(s, config.GetConfigServer())
+			app := NewApp(s, config.GetConfigServer(), nil)
 
 			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()
@@ -323,7 +323,7 @@ func Test_getOneJsonWithSignHandler(t *testing.T) {
 			s.Set(m2)
 			cfg := config.GetConfigServer()
 			cfg.Key = key
-			app := NewApp(s, cfg)
+			app := NewApp(s, cfg, nil)
 
 			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()
@@ -416,7 +416,7 @@ func Test_updateHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			app := NewApp(storage.NewStorage(), config.GetConfigServer())
+			app := NewApp(storage.NewStorage(), config.GetConfigServer(), nil)
 
 			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()
@@ -509,7 +509,7 @@ func Test_getOneHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			app := NewApp(storage.NewStorage(), config.GetConfigServer())
+			app := NewApp(storage.NewStorage(), config.GetConfigServer(), nil)
 
 			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()
@@ -574,7 +574,7 @@ func Test_getAllHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			app := NewApp(storage.NewStorage(), config.GetConfigServer())
+			app := NewApp(storage.NewStorage(), config.GetConfigServer(), nil)
 
 			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()

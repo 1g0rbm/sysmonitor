@@ -91,6 +91,10 @@ func (ms MemStorage) Update(m metric.IMetric) (metric.IMetric, error) {
 	}
 }
 
+func (ms MemStorage) Health() error {
+	return nil
+}
+
 func newMemStorage() MemStorage {
 	return make(MemStorage)
 }

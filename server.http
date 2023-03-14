@@ -1,0 +1,25 @@
+### Update metric using json
+POST http://localhost:8080/update/
+Accept: application/json
+Content-Type: application/json
+
+{
+  "id": "Alloc",
+  "type": "gauge",
+  "value": 277377
+}
+
+### Get metric as json
+POST http://localhost:8080/value/
+Accept: application/json
+Content-Type: application/json
+
+{
+  "id": "Alloc",
+  "type": "gauge"
+}
+
+### Storage ping
+### Get metric as json
+GET http://localhost:8080/ping
+Accept: text/plain

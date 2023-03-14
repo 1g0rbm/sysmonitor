@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"github.com/1g0rbm/sysmonitor/internal/storage"
 	"log"
 	"net/http"
 	"os"
@@ -14,28 +15,21 @@ import (
 
 	"github.com/1g0rbm/sysmonitor/internal/application"
 	"github.com/1g0rbm/sysmonitor/internal/config"
-	"github.com/1g0rbm/sysmonitor/internal/storage"
-)
-
-var (
-	s     storage.Storage
-	dbErr error
 )
 
 func main() {
 	cfg := config.GetConfigServer()
 
-	switch cfg.GetStorageDriverName() {
-	case storage.DBStorageType:
-		s, dbErr = storage.NewDBStorage("pgx", cfg.DBDsn)
-		if dbErr != nil {
-			log.Fatalf("Create DB storage error: %s", dbErr)
-		}
-	case storage.MemStorageType:
-		s = storage.NewMemStorage()
-	default:
-		log.Fatalf("Invalid storage type %d", cfg.GetStorageDriverName())
+	s, cls, dbErr := storage.NewStorage(cfg)
+	if dbErr != nil {
+		log.Fatal(dbErr)
 	}
+
+	defer func() {
+		if err := cls(); err != nil {
+			log.Fatal(err)
+		}
+	}()
 
 	app := application.NewApp(s, cfg)
 

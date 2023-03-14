@@ -51,13 +51,13 @@ func NewApp(s storage.Storage, cfg *config.ServerConfig) (app *App) {
 	app.router.Post("/update/", app.updateJSONMetricHandler)
 	app.router.Post("/value/", app.getJSONMetricHandler)
 
-	//app.router.Get("/ping", app.dbHealthCheckHandler)
+	app.router.Get("/ping", app.dbHealthCheckHandler)
 
 	return app
 }
 
 func (app App) Run() (err error) {
-	if app.config.Restore {
+	if app.config.NeedRestore() {
 		err = fs.RestoreStorage(app.storage, app.config.StoreFile)
 		if err != nil {
 			return err
@@ -103,16 +103,30 @@ func (app App) Stop(ctx context.Context) error {
 	return app.server.Shutdown(ctx)
 }
 
-//func (app App) dbHealthCheckHandler(w http.ResponseWriter, r *http.Request) {
-//	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-//	defer cancel()
-//	if err := app.db.PingContext(ctx); err != nil {
-//		http.Error(w, err.Error(), http.StatusInternalServerError)
-//	}
-//
-//	w.Header().Set("Content-Type", "text/plain")
-//	w.WriteHeader(http.StatusOK)
-//}
+func (app App) dbHealthCheckHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(http.StatusOK)
+
+	if app.config.DBDsn == "" {
+		return
+	}
+
+	db, ok := app.storage.(storage.DBStorage)
+	if !ok {
+		log.Println("Can not get db instance from storage interface")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 1*time.Second)
+	defer cancel()
+
+	if err := db.Ping(ctx); err != nil {
+		log.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+}
 
 func (app App) getAllMetricsHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")

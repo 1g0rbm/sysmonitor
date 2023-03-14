@@ -2,7 +2,6 @@ package config
 
 import (
 	"flag"
-	"github.com/1g0rbm/sysmonitor/internal/storage"
 	"os"
 	"strconv"
 	"time"
@@ -66,12 +65,8 @@ func GetConfigServer() *ServerConfig {
 	}
 }
 
-func (sc ServerConfig) GetStorageDriverName() storage.Type {
-	if sc.DBDsn == "" {
-		return storage.MemStorageType
-	} else {
-		return storage.DBStorageType
-	}
+func (sc ServerConfig) NeedRestore() bool {
+	return sc.DBDsn == "" && sc.Restore
 }
 
 func (sc ServerConfig) NeedPeriodicalStore() bool {

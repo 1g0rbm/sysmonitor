@@ -21,7 +21,7 @@ import (
 func main() {
 	cfg := config.GetConfigServer()
 
-	db, dbErr := sql.Open("pgx", cfg.DbDsn)
+	db, dbErr := sql.Open("pgx", cfg.DBDsn)
 	if dbErr != nil {
 		log.Fatal(dbErr)
 	}

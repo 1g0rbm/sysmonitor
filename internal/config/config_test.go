@@ -32,7 +32,7 @@ func TestGetConfigServer(t *testing.T) {
 				StoreFile:     "/tmp/metrics-db.json",
 				Restore:       false,
 				Key:           "qwerty",
-				DbDsn:         "postgresql://user:pass@host/db",
+				DBDsn:         "postgresql://user:pass@host/db",
 			},
 		},
 		{
@@ -44,7 +44,7 @@ func TestGetConfigServer(t *testing.T) {
 				StoreFile:     "/tmp/devops-metrics-db.json",
 				Restore:       true,
 				Key:           "",
-				DbDsn:         "",
+				DBDsn:         "",
 			},
 		},
 	}

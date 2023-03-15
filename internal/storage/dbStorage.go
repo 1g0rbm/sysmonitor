@@ -18,6 +18,14 @@ func NewDBStorage(driverName string, dsn string) (Storage, CloseStorage, error) 
 		return nil, nil, err
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	_, err = db.ExecContext(ctx, MetricsTable())
+	if err != nil {
+		return nil, nil, err
+	}
+
 	c := func() error { return db.Close() }
 
 	return DBStorage{

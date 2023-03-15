@@ -12,8 +12,6 @@ type Storage interface {
 	Get(name string) (metric.IMetric, error)
 	All() map[string]metric.IMetric
 	Update(m metric.IMetric) (metric.IMetric, error)
-	GetCounter(name string) (metric.CounterMetric, error)
-	GetGauge(name string) (metric.GaugeMetric, error)
 }
 
 type CloseStorage func() error

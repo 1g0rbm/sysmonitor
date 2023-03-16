@@ -72,9 +72,8 @@ func (D DBStorage) All() (map[string]metric.IMetric, error) {
 	}
 
 	defer func(r *sql.Rows) {
-		err := r.Close()
-		if err != nil {
-
+		if rErr := r.Close(); rErr != nil {
+			err = rErr
 		}
 	}(r)
 
@@ -95,6 +94,10 @@ func (D DBStorage) All() (map[string]metric.IMetric, error) {
 		}
 
 		ms[id] = m
+	}
+
+	if err := r.Err(); err != nil {
+		return nil, err
 	}
 
 	return ms, nil

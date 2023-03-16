@@ -15,6 +15,8 @@ type Storage interface {
 
 type CloseStorage func() error
 
+var ErrMetricNotFound error
+
 func NewStorage(cfg *config.ServerConfig) (Storage, CloseStorage, error) {
 	if cfg.DBDsn != "" {
 		s, cls, dbErr := NewDBStorage("pgx", cfg.DBDsn)

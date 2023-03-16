@@ -7,8 +7,6 @@ import (
 	"github.com/1g0rbm/sysmonitor/internal/metric"
 )
 
-var ErrMetricNotFound error
-
 // MemStorage ToDo Data Race
 type MemStorage map[string]metric.IMetric
 

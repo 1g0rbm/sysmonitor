@@ -44,7 +44,12 @@ func (D DBStorage) Get(name string) (metric.IMetric, error) {
 		val   *float64
 	)
 
-	if err := D.sql.QueryRow(SelectMetric(), name).Scan(&id, &mType, &delta, &val); err != nil {
+	err := D.sql.QueryRow(SelectMetric(), name).Scan(&id, &mType, &delta, &val)
+	if delta == nil && val == nil {
+		ErrMetricNotFound = fmt.Errorf("metric not found by name '%s'", name)
+		return nil, ErrMetricNotFound
+	}
+	if err != nil {
 		return nil, err
 	}
 

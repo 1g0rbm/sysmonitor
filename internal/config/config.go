@@ -51,7 +51,7 @@ func GetConfigServer() *ServerConfig {
 	flag.StringVar(&storeFile, "f", defaultStoreFile, "-f=<VALUE")
 	flag.BoolVar(&restore, "r", defaultRestore, "-r=<VALUE>")
 	flag.StringVar(&key, "k", defaultKey, "-k=<KEY>")
-	flag.StringVar(&DBDsn, "d", defaultDBDsn, "-k=<DATABASE_DSN>")
+	flag.StringVar(&DBDsn, "d", defaultDBDsn, "-d=<DATABASE_DSN>")
 
 	flag.Parse()
 

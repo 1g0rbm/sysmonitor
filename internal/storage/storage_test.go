@@ -25,7 +25,7 @@ func TestRun(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			s := NewMemStorage()
 			for _, m := range tt.data {
-				s.Set(m)
+				_, _ = s.Update(m)
 			}
 
 			m1, err1 := s.Get("GCSys")
@@ -40,7 +40,7 @@ func TestRun(t *testing.T) {
 			assert.Errorf(t, err3, "metric not found by name 'Undefined'")
 			assert.Empty(t, m3)
 
-			ms := s.All()
+			ms, _ := s.All()
 			assert.Len(t, ms, 2)
 			assert.Equal(t, tt.data, ms)
 

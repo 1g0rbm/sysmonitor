@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"github.com/1g0rbm/sysmonitor/internal/storage"
 	"log"
 	"net/http"
 	"os"
@@ -15,6 +14,7 @@ import (
 
 	"github.com/1g0rbm/sysmonitor/internal/application"
 	"github.com/1g0rbm/sysmonitor/internal/config"
+	"github.com/1g0rbm/sysmonitor/internal/storage"
 )
 
 func main() {

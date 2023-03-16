@@ -49,6 +49,20 @@ var (
 	ErrInvalidValue = fmt.Errorf("invalid value")
 )
 
+func NewGaugeMetric(name string, value Gauge) GaugeMetric {
+	return GaugeMetric{
+		name:  name,
+		value: value,
+	}
+}
+
+func NewCounterMetric(name string, value Counter) CounterMetric {
+	return CounterMetric{
+		name:  name,
+		value: value,
+	}
+}
+
 func NewMetrics(id string, mType string, delta *int64, value *float64) (Metrics, error) {
 	if mType == CounterType && delta == nil {
 		return Metrics{}, fmt.Errorf("delata can not be nil for a counter type")

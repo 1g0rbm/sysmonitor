@@ -8,9 +8,8 @@ import (
 type Type int
 
 type Storage interface {
-	Set(m metric.IMetric)
 	Get(name string) (metric.IMetric, error)
-	All() map[string]metric.IMetric
+	All() (map[string]metric.IMetric, error)
 	Update(m metric.IMetric) (metric.IMetric, error)
 }
 

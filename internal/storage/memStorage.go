@@ -12,12 +12,8 @@ var ErrMetricNotFound error
 // MemStorage ToDo Data Race
 type MemStorage map[string]metric.IMetric
 
-func (ms MemStorage) All() map[string]metric.IMetric {
-	return ms
-}
-
-func (ms MemStorage) Set(m metric.IMetric) {
-	ms[m.Name()] = m
+func (ms MemStorage) All() (map[string]metric.IMetric, error) {
+	return ms, nil
 }
 
 func (ms MemStorage) Get(name string) (metric.IMetric, error) {
@@ -69,7 +65,7 @@ func (ms MemStorage) Update(m metric.IMetric) (metric.IMetric, error) {
 	case metric.CounterType:
 		em, emErr := ms.Get(m.Name())
 		if emErr != nil && errors.Is(ErrMetricNotFound, emErr) {
-			ms.Set(m)
+			ms[m.Name()] = m
 			return m, nil
 		}
 		if emErr != nil {
@@ -81,10 +77,10 @@ func (ms MemStorage) Update(m metric.IMetric) (metric.IMetric, error) {
 			return nil, updErr
 		}
 
-		ms.Set(updM)
+		ms[updM.Name()] = updM
 		return updM, nil
 	case metric.GaugeType:
-		ms.Set(m)
+		ms[m.Name()] = m
 		return m, nil
 	default:
 		return nil, fmt.Errorf("undefined metric type '%s'", m.Type())

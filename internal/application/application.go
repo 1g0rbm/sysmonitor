@@ -78,7 +78,8 @@ func (app App) Run() (err error) {
 			for {
 				select {
 				case <-dumpTicker.C:
-					dErr := fs.DumpStorage(app.storage.All(), app.config.StoreFile)
+					a, _ := app.storage.All()
+					dErr := fs.DumpStorage(a, app.config.StoreFile)
 					if dErr != nil && err == nil {
 						err = dErr
 					}
@@ -95,7 +96,8 @@ func (app App) Run() (err error) {
 }
 
 func (app App) Stop(ctx context.Context) error {
-	dErr := fs.DumpStorage(app.storage.All(), app.config.StoreFile)
+	a, _ := app.storage.All()
+	dErr := fs.DumpStorage(a, app.config.StoreFile)
 	if dErr != nil {
 		return dErr
 	}
@@ -135,7 +137,10 @@ func (app App) getAllMetricsHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, tErr.Error(), http.StatusInternalServerError)
 	}
 
-	m := app.storage.All()
+	m, err := app.storage.All()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 
 	if err := t.Execute(w, m); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

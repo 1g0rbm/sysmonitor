@@ -251,8 +251,8 @@ func Test_getOneJsonHandler(t *testing.T) {
 
 		t.Run(tt.name, func(t *testing.T) {
 			s := storage.NewMemStorage()
-			s.Set(m1)
-			s.Set(m2)
+			_, _ = s.Update(m1)
+			_, _ = s.Update(m2)
 			app := NewApp(s, config.GetConfigServer())
 
 			ts := httptest.NewServer(app.getRouter())
@@ -319,8 +319,8 @@ func Test_getOneJsonWithSignHandler(t *testing.T) {
 
 		t.Run(tt.name, func(t *testing.T) {
 			s := storage.NewMemStorage()
-			s.Set(m1)
-			s.Set(m2)
+			_, _ = s.Update(m1)
+			_, _ = s.Update(m2)
 			cfg := config.GetConfigServer()
 			cfg.Key = key
 			app := NewApp(s, cfg)

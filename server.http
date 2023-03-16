@@ -1,4 +1,4 @@
-### Update metric using json
+### Update gauge metric using json
 POST http://localhost:8080/update/
 Accept: application/json
 Content-Type: application/json
@@ -6,10 +6,21 @@ Content-Type: application/json
 {
   "id": "Alloc",
   "type": "gauge",
-  "value": 277377
+  "value": 277777
 }
 
-### Get metric as json
+### Update counter metric using json
+POST http://localhost:8080/update/
+Accept: application/json
+Content-Type: application/json
+
+{
+  "id": "Count",
+  "type": "counter",
+  "delta": 5
+}
+
+### Get gauge metric as json
 POST http://localhost:8080/value/
 Accept: application/json
 Content-Type: application/json
@@ -17,6 +28,16 @@ Content-Type: application/json
 {
   "id": "Alloc",
   "type": "gauge"
+}
+
+### Get counter metric as json
+POST http://localhost:8080/value/
+Accept: application/json
+Content-Type: application/json
+
+{
+  "id": "Count",
+  "type": "counter"
 }
 
 ### Storage ping

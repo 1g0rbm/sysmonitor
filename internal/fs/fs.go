@@ -111,7 +111,10 @@ func RestoreStorage(ms storage.Storage, filepath string) (err error) {
 			return imErr
 		}
 
-		ms.Set(im)
+		_, err = ms.Update(im)
+		if err != nil {
+			return err
+		}
 	}
 
 	return

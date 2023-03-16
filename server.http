@@ -40,6 +40,10 @@ Content-Type: application/json
   "type": "counter"
 }
 
+### Get all metrics
+GET http://localhost:8081/
+Content-Type: text/html
+
 ### Storage ping
 ### Get metric as json
 GET http://localhost:8081/ping

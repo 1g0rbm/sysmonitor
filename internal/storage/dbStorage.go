@@ -71,7 +71,7 @@ func (D DBStorage) All() (map[string]metric.IMetric, error) {
 		val   *float64
 	)
 
-	r, err := D.sql.Query(SelectMetric())
+	r, err := D.sql.Query(SelectMetrics())
 	if err != nil {
 		return nil, err
 	}

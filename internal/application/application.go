@@ -191,7 +191,7 @@ func (app App) updateJSONMetricsHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	sendJSONResponse(w, http.StatusOK, []byte{})
+	sendJSONResponse(w, http.StatusOK, []byte("{}"))
 }
 
 func (app App) updateJSONMetricHandler(w http.ResponseWriter, r *http.Request) {

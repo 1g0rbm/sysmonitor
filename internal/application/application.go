@@ -83,7 +83,7 @@ func (app App) Run() (err error) {
 				select {
 				case <-dumpTicker.C:
 					a, _ := app.storage.All()
-					dErr := fs.DumpStorage(a, app.config.StoreFile)
+					dErr := fs.DumpStorage(a, app.config.StoreFile, app.logger)
 					if dErr != nil && err == nil {
 						err = dErr
 					}
@@ -102,7 +102,7 @@ func (app App) Run() (err error) {
 
 func (app App) Stop(ctx context.Context) error {
 	a, _ := app.storage.All()
-	dErr := fs.DumpStorage(a, app.config.StoreFile)
+	dErr := fs.DumpStorage(a, app.config.StoreFile, app.logger)
 	if dErr != nil {
 		return dErr
 	}

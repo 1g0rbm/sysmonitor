@@ -2,8 +2,8 @@ package fs
 
 import (
 	"encoding/json"
+	"github.com/rs/zerolog"
 	"io"
-	"log"
 	"os"
 
 	"github.com/1g0rbm/sysmonitor/internal/metric"
@@ -66,7 +66,7 @@ func (mr *MetricReader) Close() error {
 	return mr.file.Close()
 }
 
-func DumpStorage(ms storage.MemStorage, filepath string) error {
+func DumpStorage(ms storage.MemStorage, filepath string, l zerolog.Logger) error {
 	mw, err := NewMetricWriter(filepath)
 	if err != nil {
 		return err
@@ -75,10 +75,10 @@ func DumpStorage(ms storage.MemStorage, filepath string) error {
 	for _, m := range ms {
 		metrics, imErr := metric.NewMetricsFromIMetric(m)
 		if imErr != nil {
-			log.Printf("convert metric %s error: %s", m.Name(), err)
+			l.Error().Msgf("Convert metric %s error: %s", m.Name(), err)
 		}
 		if err := mw.Write(metrics); err != nil {
-			log.Printf("save metric %s error: %s", m.Name(), err)
+			l.Error().Msgf("Save metric %s error: %s", m.Name(), err)
 		}
 	}
 

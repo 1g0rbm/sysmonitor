@@ -51,6 +51,8 @@ func NewApp(s storage.Storage, cfg *config.ServerConfig) (app *App) {
 	app.router.Post("/update/", app.updateJSONMetricHandler)
 	app.router.Post("/value/", app.getJSONMetricHandler)
 
+	app.router.Post("/updates/", app.updateJSONMetricsHandler)
+
 	app.router.Get("/ping", app.dbHealthCheckHandler)
 
 	return app
@@ -145,6 +147,51 @@ func (app App) getAllMetricsHandler(w http.ResponseWriter, r *http.Request) {
 	if err := t.Execute(w, m); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+func (app App) updateJSONMetricsHandler(w http.ResponseWriter, r *http.Request) {
+	var b metric.MetricsBatch
+
+	decodeErr := b.Decode(r.Body)
+	if decodeErr != nil {
+		sendJSONResponse(w, http.StatusBadRequest, []byte(decodeErr.Error()))
+		return
+	}
+
+	var s []metric.IMetric
+	for _, m := range b.Metrics {
+		if m.Delta == nil && m.Value == nil {
+			sendJSONResponse(w, http.StatusBadRequest, []byte("invalid metric value"))
+			return
+		}
+
+		if app.config.NeedCheckSign() {
+			ok, signErr := m.CheckSign(app.config.Key)
+			if signErr != nil {
+				sendJSONResponse(w, http.StatusInternalServerError, []byte("check sign error"))
+				return
+			}
+			if !ok {
+				sendJSONResponse(w, http.StatusBadRequest, []byte("wrong sign"))
+				return
+			}
+		}
+
+		im, convertErr := m.ToIMetric()
+		if convertErr != nil {
+			sendJSONResponse(w, http.StatusBadRequest, []byte(convertErr.Error()))
+			return
+		}
+
+		s = append(s, im)
+	}
+
+	if updErr := app.storage.BatchUpdate(s); updErr != nil {
+		sendJSONResponse(w, http.StatusInternalServerError, []byte("update error"))
+		return
+	}
+
+	sendJSONResponse(w, http.StatusOK, []byte{})
 }
 
 func (app App) updateJSONMetricHandler(w http.ResponseWriter, r *http.Request) {

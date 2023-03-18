@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strconv"
+	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 
@@ -36,7 +37,7 @@ func NewDBStorage(driverName string, dsn string) (Storage, CloseStorage, error) 
 	}, c, nil
 }
 
-func (D DBStorage) Get(name string) (metric.IMetric, error) {
+func (s DBStorage) Get(name string) (metric.IMetric, error) {
 	var (
 		id    string
 		mType string
@@ -44,7 +45,7 @@ func (D DBStorage) Get(name string) (metric.IMetric, error) {
 		val   *float64
 	)
 
-	err := D.sql.QueryRow(SelectMetric(), name).Scan(&id, &mType, &delta, &val)
+	err := s.sql.QueryRow(SelectMetric(), name).Scan(&id, &mType, &delta, &val)
 	if delta == nil && val == nil {
 		ErrMetricNotFound = fmt.Errorf("metric not found by name '%s'", name)
 		return nil, ErrMetricNotFound
@@ -63,7 +64,7 @@ func (D DBStorage) Get(name string) (metric.IMetric, error) {
 	}
 }
 
-func (D DBStorage) All() (map[string]metric.IMetric, error) {
+func (s DBStorage) All() (map[string]metric.IMetric, error) {
 	var (
 		id    string
 		mType string
@@ -71,7 +72,7 @@ func (D DBStorage) All() (map[string]metric.IMetric, error) {
 		val   *float64
 	)
 
-	r, err := D.sql.Query(SelectMetrics())
+	r, err := s.sql.Query(SelectMetrics())
 	if err != nil {
 		return nil, err
 	}
@@ -108,11 +109,11 @@ func (D DBStorage) All() (map[string]metric.IMetric, error) {
 	return ms, nil
 }
 
-func (D DBStorage) Update(m metric.IMetric) (metric.IMetric, error) {
+func (s DBStorage) Update(m metric.IMetric) (metric.IMetric, error) {
 	switch m.Type() {
 	case metric.GaugeType:
 		val, _ := strconv.ParseFloat(m.ValueAsString(), 64)
-		_, err := D.sql.Exec(CreateOrUpdateGauge(), m.Name(), m.Type(), val)
+		_, err := s.sql.Exec(CreateOrUpdateGauge(), m.Name(), m.Type(), val)
 		if err != nil {
 			return nil, err
 		}
@@ -122,7 +123,7 @@ func (D DBStorage) Update(m metric.IMetric) (metric.IMetric, error) {
 		delta, _ := strconv.ParseInt(m.ValueAsString(), 10, 64)
 
 		var newDelta int
-		err := D.sql.QueryRow(CreateOrUpdateCounter(), m.Name(), m.Type(), delta).Scan(&newDelta)
+		err := s.sql.QueryRow(CreateOrUpdateCounter(), m.Name(), m.Type(), delta).Scan(&newDelta)
 		if err != nil {
 			return nil, err
 		}
@@ -132,6 +133,58 @@ func (D DBStorage) Update(m metric.IMetric) (metric.IMetric, error) {
 	}
 }
 
-func (D DBStorage) Ping(ctx context.Context) error {
-	return D.sql.PingContext(ctx)
+func (s DBStorage) BatchUpdate(sm []metric.IMetric) (err error) {
+	tx, err := s.sql.Begin()
+	if err != nil {
+		return
+	}
+
+	defer func(tx *sql.Tx) {
+		if err != nil {
+			err = tx.Rollback()
+		}
+	}(tx)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2000*time.Second)
+	defer cancel()
+
+	gStmt, err := tx.PrepareContext(ctx, CreateOrUpdateGauge())
+	if err != nil {
+		return
+	}
+	defer func(gStmt *sql.Stmt) {
+		err = gStmt.Close()
+	}(gStmt)
+
+	cStmt, err := tx.PrepareContext(ctx, CreateOrUpdateCounter())
+	if err != nil {
+		return
+	}
+	defer func(cStmt *sql.Stmt) {
+		err = cStmt.Close()
+	}(cStmt)
+
+	for _, m := range sm {
+		switch m.Type() {
+		case metric.GaugeType:
+			val, _ := strconv.ParseFloat(m.ValueAsString(), 64)
+			_, err = gStmt.ExecContext(ctx, m.Name(), m.Type(), val)
+			if err != nil {
+				return
+			}
+		case metric.CounterType:
+			delta, _ := strconv.ParseInt(m.ValueAsString(), 10, 64)
+			_, err = cStmt.ExecContext(ctx, m.Name(), m.Type(), delta)
+		default:
+			return fmt.Errorf("invalid metric type: %s", m.Type())
+		}
+	}
+
+	err = tx.Commit()
+
+	return
+}
+
+func (s DBStorage) Ping(ctx context.Context) error {
+	return s.sql.PingContext(ctx)
 }

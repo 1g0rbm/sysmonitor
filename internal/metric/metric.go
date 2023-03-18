@@ -40,6 +40,10 @@ type Metrics struct {
 	Hash  string   `json:"hash,omitempty"`
 }
 
+type MetricsBatch struct {
+	Metrics []Metrics `json:""`
+}
+
 const (
 	GaugeType   string = "gauge"
 	CounterType string = "counter"
@@ -149,6 +153,19 @@ func (m *Metrics) Decode(r io.Reader) error {
 
 func (m *Metrics) Encode() ([]byte, error) {
 	return json.Marshal(m)
+}
+
+func (slm *MetricsBatch) Decode(r io.Reader) error {
+	data, err := io.ReadAll(r)
+	if err != nil {
+		return err
+	}
+
+	if err = json.Unmarshal(data, &slm.Metrics); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (m *Metrics) ToIMetric() (IMetric, error) {

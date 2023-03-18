@@ -11,6 +11,7 @@ type Storage interface {
 	Get(name string) (metric.IMetric, error)
 	All() (map[string]metric.IMetric, error)
 	Update(m metric.IMetric) (metric.IMetric, error)
+	BatchUpdate(sm []metric.IMetric) error
 }
 
 type CloseStorage func() error

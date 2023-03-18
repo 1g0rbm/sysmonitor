@@ -85,6 +85,17 @@ func (ms MemStorage) Update(m metric.IMetric) (metric.IMetric, error) {
 	}
 }
 
+func (ms MemStorage) BatchUpdate(sm []metric.IMetric) error {
+	for _, m := range sm {
+		_, err := ms.Update(m)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (ms MemStorage) Health() error {
 	return nil
 }

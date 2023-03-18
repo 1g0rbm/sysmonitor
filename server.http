@@ -20,6 +20,24 @@ Content-Type: application/json
   "delta": 0
 }
 
+### Update metrics by batch
+POST http://localhost:8081/updates/
+Accept: application/json
+Content-Type: application/json
+
+[
+  {
+    "id": "Count",
+    "type": "counter",
+    "delta": 5
+  },
+  {
+    "id": "Alloc",
+    "type": "gauge",
+    "value": 277777
+  }
+]
+
 ### Get gauge metric as json
 POST http://localhost:8081/value/
 Accept: application/json

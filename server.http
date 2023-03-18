@@ -21,7 +21,7 @@ Content-Type: application/json
 }
 
 ### Update metrics by batch
-POST http://localhost:8081/updates/
+POST http://localhost:8080/updates/
 Accept: application/json
 Content-Type: application/json
 

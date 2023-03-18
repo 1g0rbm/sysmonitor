@@ -6,8 +6,10 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -80,7 +82,8 @@ func Test_updateJsonHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			app := NewApp(storage.NewMemStorage(), config.GetConfigServer())
+			l := zerolog.New(os.Stdout).With().Timestamp().Logger()
+			app := NewApp(storage.NewMemStorage(), config.GetConfigServer(), l)
 
 			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()
@@ -167,7 +170,8 @@ func Test_updateJsonWithSignHandler(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := config.GetConfigServer()
 			cfg.Key = key
-			app := NewApp(storage.NewMemStorage(), cfg)
+			l := zerolog.New(os.Stdout).With().Timestamp().Logger()
+			app := NewApp(storage.NewMemStorage(), cfg, l)
 
 			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()
@@ -253,7 +257,8 @@ func Test_getOneJsonHandler(t *testing.T) {
 			s := storage.NewMemStorage()
 			_, _ = s.Update(m1)
 			_, _ = s.Update(m2)
-			app := NewApp(s, config.GetConfigServer())
+			l := zerolog.New(os.Stdout).With().Timestamp().Logger()
+			app := NewApp(s, config.GetConfigServer(), l)
 
 			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()
@@ -323,7 +328,8 @@ func Test_getOneJsonWithSignHandler(t *testing.T) {
 			_, _ = s.Update(m2)
 			cfg := config.GetConfigServer()
 			cfg.Key = key
-			app := NewApp(s, cfg)
+			l := zerolog.New(os.Stdout).With().Timestamp().Logger()
+			app := NewApp(s, cfg, l)
 
 			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()
@@ -416,7 +422,8 @@ func Test_updateHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			app := NewApp(storage.NewMemStorage(), config.GetConfigServer())
+			l := zerolog.New(os.Stdout).With().Timestamp().Logger()
+			app := NewApp(storage.NewMemStorage(), config.GetConfigServer(), l)
 
 			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()
@@ -509,7 +516,8 @@ func Test_getOneHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			app := NewApp(storage.NewMemStorage(), config.GetConfigServer())
+			l := zerolog.New(os.Stdout).With().Timestamp().Logger()
+			app := NewApp(storage.NewMemStorage(), config.GetConfigServer(), l)
 
 			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()
@@ -574,7 +582,8 @@ func Test_getAllHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			app := NewApp(storage.NewMemStorage(), config.GetConfigServer())
+			l := zerolog.New(os.Stdout).With().Timestamp().Logger()
+			app := NewApp(storage.NewMemStorage(), config.GetConfigServer(), l)
 
 			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()

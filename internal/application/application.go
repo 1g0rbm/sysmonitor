@@ -180,7 +180,7 @@ func (app App) updateJSONMetricsHandler(w http.ResponseWriter, r *http.Request) 
 				return
 			}
 			if !ok {
-				app.logger.Error().Msgf("Metric wrong sign %s", m)
+				app.logger.Error().Msgf("Metric wrong sign %v", m)
 				sendJSONResponse(w, http.StatusBadRequest, []byte("wrong sign"), app.logger)
 				return
 			}
@@ -228,7 +228,7 @@ func (app App) updateJSONMetricHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if !ok {
-			app.logger.Error().Msgf("Metric wrong sign %s", m)
+			app.logger.Error().Msgf("Metric wrong sign %v", m)
 			sendJSONResponse(w, http.StatusBadRequest, []byte("wrong sign"), app.logger)
 			return
 		}

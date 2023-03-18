@@ -108,8 +108,8 @@ func (w Watcher) update(rms runtime.MemStats) {
 	w.gm.update(rms)
 }
 
-func (w Watcher) getAll(cfg *config.AgentConfig) ([]metric.Metrics, error) {
-	var all []metric.Metrics
+func (w Watcher) getAll(cfg *config.AgentConfig) (metric.MetricsBatch, error) {
+	var mb metric.MetricsBatch
 
 	for name, value := range w.gm {
 		v := float64(value)
@@ -117,10 +117,10 @@ func (w Watcher) getAll(cfg *config.AgentConfig) ([]metric.Metrics, error) {
 		if cfg.NeedSign() {
 			sgnErr := m.Sign(cfg.Key)
 			if sgnErr != nil {
-				return nil, sgnErr
+				return metric.MetricsBatch{}, sgnErr
 			}
 		}
-		all = append(all, m)
+		mb.Metrics = append(mb.Metrics, m)
 	}
 
 	for name, value := range w.cm {
@@ -129,13 +129,13 @@ func (w Watcher) getAll(cfg *config.AgentConfig) ([]metric.Metrics, error) {
 		if cfg.NeedSign() {
 			sgnErr := m.Sign(cfg.Key)
 			if sgnErr != nil {
-				return nil, sgnErr
+				return metric.MetricsBatch{}, sgnErr
 			}
 		}
-		all = append(all, m)
+		mb.Metrics = append(mb.Metrics, m)
 	}
 
-	return all, nil
+	return mb, nil
 }
 
 func (w Watcher) Run(cfg *config.AgentConfig) error {
@@ -163,24 +163,22 @@ func (w Watcher) Run(cfg *config.AgentConfig) error {
 			runtime.ReadMemStats(&rms)
 			w.update(rms)
 		case <-sendMetricsTicker.C:
-			am, amErr := w.getAll(cfg)
+			mb, amErr := w.getAll(cfg)
 			if amErr != nil {
 				fmt.Printf("Error while create list to send report: %s", amErr)
 			}
-			for _, m := range am {
-				updURL.Path = "/update/"
-				err := sendMetrics(updURL.String(), m)
-				if err != nil {
-					fmt.Println(err)
-					continue
-				}
-				fmt.Printf("Metric %s was sent successfull\n", m.ID)
+
+			updURL.Path = "/updates/"
+			if err := sendMetrics(updURL.String(), mb); err != nil {
+				fmt.Println(err)
+			} else {
+				fmt.Printf("%d metrics was sent successfull\n", len(mb.Metrics))
 			}
 		}
 	}
 }
 
-func sendMetrics(url string, m metric.Metrics) error {
+func sendMetrics(url string, b metric.MetricsBatch) error {
 	client := &http.Client{
 		Timeout: clientTimeout,
 	}
@@ -188,12 +186,12 @@ func sendMetrics(url string, m metric.Metrics) error {
 	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
 	defer cancel()
 
-	b, mErr := m.Encode()
+	d, mErr := b.Encode()
 	if mErr != nil {
 		return mErr
 	}
 
-	request, err := http.NewRequest("POST", url, bytes.NewBuffer(b))
+	request, err := http.NewRequest("POST", url, bytes.NewBuffer(d))
 	if err != nil {
 		return err
 	}

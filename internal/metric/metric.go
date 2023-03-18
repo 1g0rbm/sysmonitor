@@ -168,6 +168,10 @@ func (slm *MetricsBatch) Decode(r io.Reader) error {
 	return nil
 }
 
+func (slm *MetricsBatch) Encode() ([]byte, error) {
+	return json.Marshal(slm.Metrics)
+}
+
 func (m *Metrics) ToIMetric() (IMetric, error) {
 	var value string
 	switch m.MType {

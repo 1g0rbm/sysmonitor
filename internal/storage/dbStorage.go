@@ -12,6 +12,8 @@ import (
 	"github.com/1g0rbm/sysmonitor/internal/metric"
 )
 
+const updateTimeLimit = 10 * time.Second
+
 type DBStorage struct {
 	sql *sql.DB
 }
@@ -143,7 +145,7 @@ func (s DBStorage) BatchUpdate(sm []metric.IMetric) (err error) {
 		}
 	}(tx)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2000*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), updateTimeLimit)
 	defer cancel()
 
 	gStmt, err := tx.PrepareContext(ctx, CreateOrUpdateGauge())

@@ -64,7 +64,7 @@ func (s DBStorage) Get(name string) (metric.IMetric, error) {
 	}
 }
 
-func (s DBStorage) All() (map[string]metric.IMetric, error) {
+func (s DBStorage) Find(limit int, offset int) (map[string]metric.IMetric, error) {
 	var (
 		id    string
 		mType string
@@ -72,7 +72,7 @@ func (s DBStorage) All() (map[string]metric.IMetric, error) {
 		val   *float64
 	)
 
-	r, err := s.sql.Query(SelectMetrics())
+	r, err := s.sql.Query(SelectMetrics(), limit, offset)
 	if err != nil {
 		return nil, err
 	}

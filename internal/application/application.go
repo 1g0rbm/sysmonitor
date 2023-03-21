@@ -18,6 +18,11 @@ import (
 	"github.com/1g0rbm/sysmonitor/internal/storage"
 )
 
+const (
+	metricOnPage = 50
+	page         = 1
+)
+
 type App struct {
 	storage storage.Storage
 	router  *chi.Mux
@@ -154,7 +159,7 @@ func (app App) getAllMetricsHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, tErr.Error(), http.StatusInternalServerError)
 	}
 
-	m, err := app.storage.All()
+	m, err := app.storage.Find(metricOnPage, 0)
 	if err != nil {
 		app.logger.Error().Msgf("Error while getting metrics list: %s", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)

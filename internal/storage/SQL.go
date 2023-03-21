@@ -38,6 +38,7 @@ WHERE id = $1
 const selectMetrics = `
 SELECT id,m_type,delta,val
 FROM metrics
+LIMIT $1 OFFSET $2
 `
 
 func MetricsTable() string {

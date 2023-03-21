@@ -3,17 +3,34 @@ package storage
 import (
 	"errors"
 	"fmt"
-	"github.com/1g0rbm/sysmonitor/internal/fs"
 	"io"
 
+	"github.com/1g0rbm/sysmonitor/internal/fs"
 	"github.com/1g0rbm/sysmonitor/internal/metric"
 )
 
 // MemStorage ToDo Data Race
 type MemStorage map[string]metric.IMetric
 
-func (ms MemStorage) All() (map[string]metric.IMetric, error) {
-	return ms, nil
+func (ms MemStorage) Find(limit int, offset int) (map[string]metric.IMetric, error) {
+	if offset < 0 || offset >= len(ms) || limit < 0 {
+		return nil, errors.New("invalid input parameters")
+	}
+
+	cnt := 0
+	result := make(map[string]metric.IMetric)
+
+	for key, m := range ms {
+		if cnt >= offset {
+			result[key] = m
+			if len(result) == limit {
+				break
+			}
+		}
+		cnt++
+	}
+
+	return result, nil
 }
 
 func (ms MemStorage) Get(name string) (metric.IMetric, error) {

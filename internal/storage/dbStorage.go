@@ -16,10 +16,10 @@ type DBStorage struct {
 	sql *sql.DB
 }
 
-func NewDBStorage(driverName string, dsn string) (Storage, CloseStorage, error) {
+func NewDBStorage(driverName string, dsn string) (Storage, error) {
 	db, err := sql.Open(driverName, dsn)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -27,14 +27,12 @@ func NewDBStorage(driverName string, dsn string) (Storage, CloseStorage, error) 
 
 	_, err = db.ExecContext(ctx, MetricsTable())
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-
-	c := func() error { return db.Close() }
 
 	return DBStorage{
 		sql: db,
-	}, c, nil
+	}, nil
 }
 
 func (s DBStorage) Get(name string) (metric.IMetric, error) {
@@ -187,4 +185,8 @@ func (s DBStorage) BatchUpdate(sm []metric.IMetric) (err error) {
 
 func (s DBStorage) Ping(ctx context.Context) error {
 	return s.sql.PingContext(ctx)
+}
+
+func (s DBStorage) Close() error {
+	return s.sql.Close()
 }

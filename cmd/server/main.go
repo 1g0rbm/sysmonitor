@@ -3,17 +3,18 @@ package main
 import (
 	"context"
 	"errors"
-	"github.com/rs/zerolog"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/rs/zerolog"
+
 	"github.com/1g0rbm/sysmonitor/internal/application"
 	"github.com/1g0rbm/sysmonitor/internal/config"
 	"github.com/1g0rbm/sysmonitor/internal/storage"
-	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 func main() {
@@ -21,16 +22,10 @@ func main() {
 
 	cfg := config.GetConfigServer()
 
-	s, cls, dbErr := storage.NewStorage(cfg)
+	s, dbErr := storage.NewStorage(cfg.DBDsn)
 	if dbErr != nil {
 		l.Fatal().Msg(dbErr.Error())
 	}
-
-	defer func() {
-		if err := cls(); err != nil {
-			l.Fatal().Msg(err.Error())
-		}
-	}()
 
 	app := application.NewApp(s, cfg, l)
 
@@ -48,7 +43,7 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	stopErr := app.Stop(ctx)
+	stopErr := app.Shutdown(ctx)
 	if stopErr != nil {
 		l.Fatal().Msgf("Application stop error: %s", stopErr)
 	}

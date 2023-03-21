@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"github.com/1g0rbm/sysmonitor/internal/config"
 	"github.com/1g0rbm/sysmonitor/internal/metric"
 )
 
@@ -14,18 +13,16 @@ type Storage interface {
 	BatchUpdate(sm []metric.IMetric) error
 }
 
-type CloseStorage func() error
-
 var ErrMetricNotFound error
 
-func NewStorage(cfg *config.ServerConfig) (Storage, CloseStorage, error) {
-	if cfg.DBDsn != "" {
-		s, cls, dbErr := NewDBStorage("pgx", cfg.DBDsn)
+func NewStorage(dsn string) (Storage, error) {
+	if dsn != "" {
+		s, dbErr := NewDBStorage("pgx", dsn)
 		if dbErr != nil {
-			return nil, nil, dbErr
+			return nil, dbErr
 		}
-		return s, cls, nil
+		return s, nil
 	} else {
-		return NewMemStorage(), func() error { return nil }, nil
+		return NewMemStorage(), nil
 	}
 }

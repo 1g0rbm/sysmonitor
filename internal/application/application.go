@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"errors"
+	"fmt"
 	"html/template"
 	"net/http"
 	"time"
@@ -12,7 +13,6 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/1g0rbm/sysmonitor/internal/config"
-	"github.com/1g0rbm/sysmonitor/internal/fs"
 	"github.com/1g0rbm/sysmonitor/internal/metric"
 	localmiddleware "github.com/1g0rbm/sysmonitor/internal/middleware"
 	"github.com/1g0rbm/sysmonitor/internal/storage"
@@ -62,8 +62,11 @@ func NewApp(s storage.Storage, cfg *config.ServerConfig, l zerolog.Logger) (app 
 
 func (app App) Run() (err error) {
 	if app.config.NeedRestore() {
-		err = fs.RestoreStorage(app.storage, app.config.StoreFile)
-		if err != nil {
+		mem, itIsMem := app.storage.(storage.MemStorage)
+		if !itIsMem {
+			return fmt.Errorf("try to restor non memstorage storage")
+		}
+		if err := mem.Restore(app.config.StoreFile); err != nil {
 			return err
 		}
 		app.logger.Info().Msg("Metrics restored from file")
@@ -82,11 +85,11 @@ func (app App) Run() (err error) {
 			for {
 				select {
 				case <-dumpTicker.C:
-					a, _ := app.storage.All()
-					dErr := fs.DumpStorage(a, app.config.StoreFile, app.logger)
-					if dErr != nil && err == nil {
-						err = dErr
+					mem, itIsMem := app.storage.(storage.MemStorage)
+					if !itIsMem {
+						err = fmt.Errorf("try store datra for non memstorage")
 					}
+					err = mem.BackupData(app.config.StoreFile)
 				case <-ctx.Done():
 					return
 				}
@@ -100,11 +103,19 @@ func (app App) Run() (err error) {
 	return
 }
 
-func (app App) Stop(ctx context.Context) error {
-	a, _ := app.storage.All()
-	dErr := fs.DumpStorage(a, app.config.StoreFile, app.logger)
-	if dErr != nil {
-		return dErr
+func (app App) Shutdown(ctx context.Context) error {
+	db, itIsDB := app.storage.(storage.DBStorage)
+	if itIsDB {
+		if err := db.Close(); err != nil {
+			return err
+		}
+	}
+
+	mem, itIsMem := app.storage.(storage.MemStorage)
+	if itIsMem {
+		if backUpErr := mem.BackupData(app.config.StoreFile); backUpErr != nil {
+			return backUpErr
+		}
 	}
 
 	return app.server.Shutdown(ctx)

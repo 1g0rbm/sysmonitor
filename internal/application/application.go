@@ -19,8 +19,8 @@ import (
 )
 
 const (
-	metricOnPage = 50
-	page         = 1
+	metricOnPage = 100
+	offset       = 0
 )
 
 type App struct {
@@ -159,7 +159,7 @@ func (app App) getAllMetricsHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, tErr.Error(), http.StatusInternalServerError)
 	}
 
-	m, err := app.storage.Find(metricOnPage, 0)
+	m, err := app.storage.Find(metricOnPage, offset)
 	if err != nil {
 		app.logger.Error().Msgf("Error while getting metrics list: %s", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)

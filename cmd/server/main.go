@@ -3,12 +3,14 @@ package main
 import (
 	"context"
 	"errors"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/rs/zerolog"
 
 	"github.com/1g0rbm/sysmonitor/internal/application"
 	"github.com/1g0rbm/sysmonitor/internal/config"
@@ -16,28 +18,35 @@ import (
 )
 
 func main() {
+	l := zerolog.New(os.Stdout).With().Timestamp().Logger()
+
 	cfg := config.GetConfigServer()
-	s := storage.NewStorage()
-	app := application.NewApp(s, cfg)
+
+	s, dbErr := storage.NewStorage(cfg.DBDsn)
+	if dbErr != nil {
+		l.Fatal().Msg(dbErr.Error())
+	}
+
+	app := application.NewApp(s, cfg, l)
 
 	go func() {
 		if err := app.Run(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Fatalf("Application start error: %s", err)
+			l.Fatal().Msgf("Application start error: %s", err)
 		}
 	}()
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-	log.Println("Stopping application...")
+	l.Info().Msg("Stopping application...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	stopErr := app.Stop(ctx)
+	stopErr := app.Shutdown(ctx)
 	if stopErr != nil {
-		log.Fatalf("Application stop error: %s", stopErr)
+		l.Fatal().Msgf("Application stop error: %s", stopErr)
 	}
 
-	log.Println("Application stopped")
+	l.Info().Msg("Application stopped")
 }

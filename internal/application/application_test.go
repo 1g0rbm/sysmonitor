@@ -6,8 +6,10 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -15,6 +17,8 @@ import (
 	"github.com/1g0rbm/sysmonitor/internal/metric"
 	"github.com/1g0rbm/sysmonitor/internal/storage"
 )
+
+const key = "qwerty"
 
 func Test_updateJsonHandler(t *testing.T) {
 	type want struct {
@@ -78,10 +82,103 @@ func Test_updateJsonHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			app := NewApp(storage.NewStorage(), config.GetConfigServer())
+			l := zerolog.New(os.Stdout).With().Timestamp().Logger()
+			app := NewApp(storage.NewMemStorage(), config.GetConfigServer(), l)
 
 			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()
+
+			resp, body := testJSONRequest(t, ts, tt.method, tt.path, tt.metric)
+			defer resp.Body.Close()
+
+			assert.Equal(t, tt.want.statusCode, resp.StatusCode)
+			assert.Equal(t, tt.want.contentType, resp.Header.Get("Content-Type"))
+			assert.Equal(t, tt.want.content, body)
+
+			flag.CommandLine = flag.NewFlagSet("", flag.ExitOnError)
+			flag.CommandLine.Init("", flag.ContinueOnError)
+		})
+	}
+}
+
+func Test_updateJsonWithSignHandler(t *testing.T) {
+	type want struct {
+		contentType string
+		statusCode  int
+		content     string
+	}
+	fVal := 2.01
+	iVal := int64(5)
+	tests := []struct {
+		name    string
+		path    string
+		method  string
+		signKey string
+		metric  metric.Metrics
+		want    want
+	}{
+		{
+			name:    "success update counter metric test",
+			path:    "/update/",
+			method:  http.MethodPost,
+			signKey: key,
+			metric: metric.Metrics{
+				ID:    "PollCounter",
+				MType: metric.CounterType,
+				Delta: &iVal,
+			},
+			want: want{
+				contentType: "application/json",
+				statusCode:  http.StatusOK,
+				content:     `{"id":"PollCounter","type":"counter","delta":5,"hash":"dc8a0047d444026352049092c0a7463a0526a7bdb7514929b73f6e4318b6b22f"}`,
+			},
+		},
+		{
+			name:    "success update gauge metric test",
+			path:    "/update/",
+			method:  http.MethodPost,
+			signKey: key,
+			metric: metric.Metrics{
+				ID:    "Alloc",
+				MType: metric.GaugeType,
+				Value: &fVal,
+			},
+			want: want{
+				contentType: "application/json",
+				statusCode:  http.StatusOK,
+				content:     `{"id":"Alloc","type":"gauge","value":2.01,"hash":"0629d877cb3e2e6e45ad6b945fdd6894be7b98e308e7ac1600e2f24cb0d37775"}`,
+			},
+		},
+		{
+			name:    "invalid sign update counter metric test",
+			path:    "/update/",
+			method:  http.MethodPost,
+			signKey: key + "qwerty",
+			metric: metric.Metrics{
+				ID:    "Alloc",
+				MType: metric.GaugeType,
+				Value: &fVal,
+			},
+			want: want{
+				contentType: "application/json",
+				statusCode:  http.StatusBadRequest,
+				content:     "wrong sign",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := config.GetConfigServer()
+			cfg.Key = key
+			l := zerolog.New(os.Stdout).With().Timestamp().Logger()
+			app := NewApp(storage.NewMemStorage(), cfg, l)
+
+			ts := httptest.NewServer(app.getRouter())
+			defer ts.Close()
+
+			signErr := tt.metric.Sign(tt.signKey)
+
+			require.Nil(t, signErr)
 
 			resp, body := testJSONRequest(t, ts, tt.method, tt.path, tt.metric)
 			defer resp.Body.Close()
@@ -157,10 +254,82 @@ func Test_getOneJsonHandler(t *testing.T) {
 		m2, _ := metric.NewMetric("PollCounter", metric.CounterType, "5")
 
 		t.Run(tt.name, func(t *testing.T) {
-			s := storage.NewStorage()
-			s.Set(m1)
-			s.Set(m2)
-			app := NewApp(s, config.GetConfigServer())
+			s := storage.NewMemStorage()
+			_, _ = s.Update(m1)
+			_, _ = s.Update(m2)
+			l := zerolog.New(os.Stdout).With().Timestamp().Logger()
+			app := NewApp(s, config.GetConfigServer(), l)
+
+			ts := httptest.NewServer(app.getRouter())
+			defer ts.Close()
+
+			resp, body := testJSONRequest(t, ts, tt.method, tt.path, tt.metric)
+			defer resp.Body.Close()
+
+			assert.Equal(t, tt.want.statusCode, resp.StatusCode)
+			assert.Equal(t, tt.want.contentType, resp.Header.Get("Content-Type"))
+			assert.Equal(t, tt.want.content, body)
+
+			flag.CommandLine = flag.NewFlagSet("", flag.ExitOnError)
+			flag.CommandLine.Init("", flag.ContinueOnError)
+		})
+	}
+}
+
+func Test_getOneJsonWithSignHandler(t *testing.T) {
+	type want struct {
+		contentType string
+		statusCode  int
+		content     string
+	}
+	tests := []struct {
+		name   string
+		path   string
+		method string
+		metric metric.Metrics
+		want   want
+	}{
+		{
+			name:   "success get gauge metric test",
+			path:   "/value/",
+			method: http.MethodPost,
+			metric: metric.Metrics{
+				ID:    "Alloc",
+				MType: metric.GaugeType,
+			},
+			want: want{
+				contentType: "application/json",
+				statusCode:  http.StatusOK,
+				content:     `{"id":"Alloc","type":"gauge","value":390204.95873408683,"hash":"8ff879de5f1f5883e17871c056c5553fc46d917864f7e7956fb91f39a140524d"}`,
+			},
+		},
+		{
+			name:   "success get counter metric test",
+			path:   "/value/",
+			method: http.MethodPost,
+			metric: metric.Metrics{
+				ID:    "PollCounter",
+				MType: metric.CounterType,
+			},
+			want: want{
+				contentType: "application/json",
+				statusCode:  http.StatusOK,
+				content:     `{"id":"PollCounter","type":"counter","delta":5,"hash":"dc8a0047d444026352049092c0a7463a0526a7bdb7514929b73f6e4318b6b22f"}`,
+			},
+		},
+	}
+	for _, tt := range tests {
+		m1, _ := metric.NewMetric("Alloc", metric.GaugeType, "390204.95873408683")
+		m2, _ := metric.NewMetric("PollCounter", metric.CounterType, "5")
+
+		t.Run(tt.name, func(t *testing.T) {
+			s := storage.NewMemStorage()
+			_, _ = s.Update(m1)
+			_, _ = s.Update(m2)
+			cfg := config.GetConfigServer()
+			cfg.Key = key
+			l := zerolog.New(os.Stdout).With().Timestamp().Logger()
+			app := NewApp(s, cfg, l)
 
 			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()
@@ -253,7 +422,8 @@ func Test_updateHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			app := NewApp(storage.NewStorage(), config.GetConfigServer())
+			l := zerolog.New(os.Stdout).With().Timestamp().Logger()
+			app := NewApp(storage.NewMemStorage(), config.GetConfigServer(), l)
 
 			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()
@@ -346,7 +516,8 @@ func Test_getOneHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			app := NewApp(storage.NewStorage(), config.GetConfigServer())
+			l := zerolog.New(os.Stdout).With().Timestamp().Logger()
+			app := NewApp(storage.NewMemStorage(), config.GetConfigServer(), l)
 
 			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()
@@ -392,7 +563,7 @@ func Test_getAllHandler(t *testing.T) {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>All metrics</title>
+    <title>Find metrics</title>
 </head>
 <body>
 <h1>List of metrics</h1>
@@ -411,7 +582,8 @@ func Test_getAllHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			app := NewApp(storage.NewStorage(), config.GetConfigServer())
+			l := zerolog.New(os.Stdout).With().Timestamp().Logger()
+			app := NewApp(storage.NewMemStorage(), config.GetConfigServer(), l)
 
 			ts := httptest.NewServer(app.getRouter())
 			defer ts.Close()

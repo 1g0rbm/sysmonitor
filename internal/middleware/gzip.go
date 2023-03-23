@@ -40,6 +40,5 @@ func Gzip(h http.Handler) http.Handler {
 		grw := compression.NewGzipResponseWriter(w, gw)
 
 		h.ServeHTTP(grw, r)
-
 	})
 }

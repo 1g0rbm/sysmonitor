@@ -23,12 +23,16 @@ func TestGetConfigServer(t *testing.T) {
 				"STORE_INTERVAL": "250s",
 				"STORE_FILE":     "/tmp/metrics-db.json",
 				"RESTORE":        "0",
+				"KEY":            "qwerty",
+				"DATABASE_DSN":   "postgresql://user:pass@host/db",
 			},
 			want: &ServerConfig{
 				Address:       "127.0.0.1:8000",
 				StoreInterval: 250 * time.Second,
 				StoreFile:     "/tmp/metrics-db.json",
 				Restore:       false,
+				Key:           "qwerty",
+				DBDsn:         "postgresql://user:pass@host/db",
 			},
 		},
 		{
@@ -39,6 +43,8 @@ func TestGetConfigServer(t *testing.T) {
 				StoreInterval: 300 * time.Second,
 				StoreFile:     "/tmp/devops-metrics-db.json",
 				Restore:       true,
+				Key:           "",
+				DBDsn:         "",
 			},
 		},
 	}
@@ -75,11 +81,13 @@ func TestGetConfigAgent(t *testing.T) {
 				"ADDRESS":         "127.0.0.1:8000",
 				"REPORT_INTERVAL": "25s",
 				"POLL_INTERVAL":   "10s",
+				"KEY":             "qwerty",
 			},
 			want: &AgentConfig{
 				Address:        "127.0.0.1:8000",
 				ReportInterval: 25 * time.Second,
 				PollInterval:   10 * time.Second,
+				Key:            "qwerty",
 			},
 		},
 		{
@@ -89,6 +97,7 @@ func TestGetConfigAgent(t *testing.T) {
 				Address:        "127.0.0.1:8080",
 				ReportInterval: 10 * time.Second,
 				PollInterval:   2 * time.Second,
+				Key:            "",
 			},
 		},
 	}

@@ -2,12 +2,9 @@ package fs
 
 import (
 	"encoding/json"
-	"io"
-	"log"
 	"os"
 
 	"github.com/1g0rbm/sysmonitor/internal/metric"
-	"github.com/1g0rbm/sysmonitor/internal/storage"
 )
 
 type MetricWriter struct {
@@ -64,55 +61,4 @@ func (mr *MetricReader) Read() (metric.Metrics, error) {
 
 func (mr *MetricReader) Close() error {
 	return mr.file.Close()
-}
-
-func DumpStorage(ms storage.MemStorage, filepath string) error {
-	mw, err := NewMetricWriter(filepath)
-	if err != nil {
-		return err
-	}
-
-	for _, m := range ms {
-		metrics, imErr := metric.NewMetricsFromIMetric(m)
-		if imErr != nil {
-			log.Printf("convert metric %s error: %s", m.Name(), err)
-		}
-		if err := mw.Write(metrics); err != nil {
-			log.Printf("save metric %s error: %s", m.Name(), err)
-		}
-	}
-
-	closeErr := mw.Close()
-	if closeErr != nil {
-		return closeErr
-	}
-
-	return nil
-}
-
-func RestoreStorage(ms storage.Storage, filepath string) (err error) {
-	mr, err := NewMetricReader(filepath)
-
-	defer func(mr *MetricReader) {
-		closeErr := mr.Close()
-		if closeErr != nil && err == nil {
-			err = closeErr
-		}
-	}(mr)
-
-	for {
-		m, err := mr.Read()
-		if err == io.EOF {
-			break
-		}
-
-		im, imErr := m.ToIMetric()
-		if imErr != nil {
-			return imErr
-		}
-
-		ms.Set(im)
-	}
-
-	return
 }

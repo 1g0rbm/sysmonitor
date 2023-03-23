@@ -14,6 +14,8 @@ const (
 	defaultStoreInterval  = 300 * time.Second
 	defaultStoreFile      = "/tmp/devops-metrics-db.json"
 	defaultRestore        = true
+	defaultKey            = ""
+	defaultDBDsn          = ""
 )
 
 var (
@@ -23,6 +25,8 @@ var (
 	storeInterval  time.Duration
 	storeFile      string
 	restore        bool
+	key            string
+	DBDsn          string
 )
 
 type ServerConfig struct {
@@ -30,12 +34,15 @@ type ServerConfig struct {
 	StoreInterval time.Duration
 	StoreFile     string
 	Restore       bool
+	Key           string
+	DBDsn         string
 }
 
 type AgentConfig struct {
 	Address        string
 	ReportInterval time.Duration
 	PollInterval   time.Duration
+	Key            string
 }
 
 func GetConfigServer() *ServerConfig {
@@ -43,6 +50,8 @@ func GetConfigServer() *ServerConfig {
 	flag.DurationVar(&storeInterval, "i", defaultStoreInterval, "-i=<VALUE>")
 	flag.StringVar(&storeFile, "f", defaultStoreFile, "-f=<VALUE")
 	flag.BoolVar(&restore, "r", defaultRestore, "-r=<VALUE>")
+	flag.StringVar(&key, "k", defaultKey, "-k=<KEY>")
+	flag.StringVar(&DBDsn, "d", defaultDBDsn, "-d=<DATABASE_DSN>")
 
 	flag.Parse()
 
@@ -51,17 +60,28 @@ func GetConfigServer() *ServerConfig {
 		StoreInterval: getEnvDuration("STORE_INTERVAL", storeInterval),
 		StoreFile:     getEnvString("STORE_FILE", storeFile),
 		Restore:       getEnvBool("RESTORE", restore),
+		Key:           getEnvString("KEY", key),
+		DBDsn:         getEnvString("DATABASE_DSN", DBDsn),
 	}
 }
 
+func (sc ServerConfig) NeedRestore() bool {
+	return sc.DBDsn == "" && sc.Restore
+}
+
 func (sc ServerConfig) NeedPeriodicalStore() bool {
-	return sc.StoreInterval > 0 && sc.StoreFile != ""
+	return sc.DBDsn == "" && (sc.StoreInterval > 0 && sc.StoreFile != "")
+}
+
+func (sc ServerConfig) NeedCheckSign() bool {
+	return sc.Key != ""
 }
 
 func GetConfigAgent() *AgentConfig {
 	flag.StringVar(&address, "a", defaultAddress, "-a=<VALUE>")
 	flag.DurationVar(&reportInterval, "r", defaultReportInterval, "-r=<VALUE>")
 	flag.DurationVar(&pollInterval, "p", defaultPollInterval, "-p=<VALUE>")
+	flag.StringVar(&key, "k", defaultKey, "-k=<KEY>")
 
 	flag.Parse()
 
@@ -69,7 +89,12 @@ func GetConfigAgent() *AgentConfig {
 		Address:        getEnvString("ADDRESS", address),
 		ReportInterval: getEnvDuration("REPORT_INTERVAL", reportInterval),
 		PollInterval:   getEnvDuration("POLL_INTERVAL", pollInterval),
+		Key:            getEnvString("KEY", key),
 	}
+}
+
+func (ac AgentConfig) NeedSign() bool {
+	return ac.Key != ""
 }
 
 func getEnvString(name string, defaultValue string) string {

@@ -5,7 +5,7 @@ const AllMetricsTemplate = `
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>All metrics</title>
+    <title>Find metrics</title>
 </head>
 <body>
 <h1>List of metrics</h1>

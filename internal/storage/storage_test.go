@@ -13,19 +13,22 @@ func TestRun(t *testing.T) {
 	m2, _ := metric.NewMetric("PollCounter", metric.CounterType, "10")
 
 	tests := []struct {
-		name string
-		data map[string]metric.IMetric
+		name  string
+		data  map[string]metric.IMetric
+		data1 map[string]metric.IMetric
+		data2 map[string]metric.IMetric
 	}{
 		{
-			name: "Success setting metrics",
-			data: map[string]metric.IMetric{m1.Name(): m1, m2.Name(): m2},
+			name:  "Success setting metrics",
+			data:  map[string]metric.IMetric{m1.Name(): m1, m2.Name(): m2},
+			data1: map[string]metric.IMetric{m2.Name(): m2},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := NewStorage()
+			s := NewMemStorage()
 			for _, m := range tt.data {
-				s.Set(m)
+				_, _ = s.Update(m)
 			}
 
 			m1, err1 := s.Get("GCSys")
@@ -40,9 +43,17 @@ func TestRun(t *testing.T) {
 			assert.Errorf(t, err3, "metric not found by name 'Undefined'")
 			assert.Empty(t, m3)
 
-			ms := s.All()
+			ms, _ := s.Find(2, 0)
 			assert.Len(t, ms, 2)
 			assert.Equal(t, tt.data, ms)
+
+			ms1, _ := s.Find(1, 1)
+			assert.Len(t, ms1, 1)
+			assert.Equal(t, tt.data1, ms1)
+
+			ms2, _ := s.Find(10, 50)
+			assert.Len(t, ms2, 0)
+			assert.Equal(t, tt.data2, ms2)
 
 			_, gUpdErr := s.Update(tt.data["GCSys"])
 			assert.Nil(t, gUpdErr)

@@ -1,6 +1,9 @@
 package metric
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -34,6 +37,11 @@ type Metrics struct {
 	MType string   `json:"type"`
 	Delta *int64   `json:"delta,omitempty"`
 	Value *float64 `json:"value,omitempty"`
+	Hash  string   `json:"hash,omitempty"`
+}
+
+type MetricsBatch struct {
+	Metrics []Metrics `json:""`
 }
 
 const (
@@ -44,6 +52,20 @@ const (
 var (
 	ErrInvalidValue = fmt.Errorf("invalid value")
 )
+
+func NewGaugeMetric(name string, value Gauge) GaugeMetric {
+	return GaugeMetric{
+		name:  name,
+		value: value,
+	}
+}
+
+func NewCounterMetric(name string, value Counter) CounterMetric {
+	return CounterMetric{
+		name:  name,
+		value: value,
+	}
+}
 
 func NewMetrics(id string, mType string, delta *int64, value *float64) (Metrics, error) {
 	if mType == CounterType && delta == nil {
@@ -79,6 +101,44 @@ func NewMetricsFromIMetric(m IMetric) (Metrics, error) {
 	}
 }
 
+func (m *Metrics) Sign(key string) error {
+	var s string
+	switch m.MType {
+	case GaugeType:
+		s = fmt.Sprintf("%s:%s:%f", m.ID, m.MType, *m.Value)
+	case CounterType:
+		s = fmt.Sprintf("%s:%s:%d", m.ID, m.MType, *m.Delta)
+	default:
+		return fmt.Errorf("invalid metric type %s", m.MType)
+	}
+
+	h := hmac.New(sha256.New, []byte(key))
+	h.Write([]byte(s))
+
+	m.Hash = hex.EncodeToString(h.Sum(nil))
+
+	return nil
+}
+
+func (m *Metrics) CheckSign(key string) (bool, error) {
+	var s string
+	switch m.MType {
+	case GaugeType:
+		s = fmt.Sprintf("%s:%s:%f", m.ID, m.MType, *m.Value)
+	case CounterType:
+		s = fmt.Sprintf("%s:%s:%d", m.ID, m.MType, *m.Delta)
+	default:
+		return false, fmt.Errorf("invalid metric type %s", m.MType)
+	}
+
+	h := hmac.New(sha256.New, []byte(key))
+	h.Write([]byte(s))
+
+	hash := hex.EncodeToString(h.Sum(nil))
+
+	return m.Hash == hash, nil
+}
+
 func (m *Metrics) Decode(r io.Reader) error {
 	if err := json.NewDecoder(r).Decode(&m); err != nil {
 		return err
@@ -93,6 +153,23 @@ func (m *Metrics) Decode(r io.Reader) error {
 
 func (m *Metrics) Encode() ([]byte, error) {
 	return json.Marshal(m)
+}
+
+func (slm *MetricsBatch) Decode(r io.Reader) error {
+	data, err := io.ReadAll(r)
+	if err != nil {
+		return err
+	}
+
+	if err = json.Unmarshal(data, &slm.Metrics); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (slm *MetricsBatch) Encode() ([]byte, error) {
+	return json.Marshal(slm.Metrics)
 }
 
 func (m *Metrics) ToIMetric() (IMetric, error) {

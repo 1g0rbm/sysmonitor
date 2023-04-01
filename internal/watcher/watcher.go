@@ -61,11 +61,12 @@ func (cm cMetrics) update() {
 }
 
 type Watcher struct {
-	cm cMetrics
-	gm gMetrics
+	cm     cMetrics
+	gm     gMetrics
+	config *config.AgentConfig
 }
 
-func NewWatcher() Watcher {
+func NewWatcher(cfg *config.AgentConfig) Watcher {
 	return Watcher{
 		gm: gMetrics{
 			"Alloc":         0,
@@ -100,6 +101,7 @@ func NewWatcher() Watcher {
 		cm: cMetrics{
 			"PollCount": 0,
 		},
+		config: cfg,
 	}
 }
 
@@ -108,14 +110,14 @@ func (w Watcher) update(rms runtime.MemStats) {
 	w.gm.update(rms)
 }
 
-func (w Watcher) getAll(cfg *config.AgentConfig) (metric.MetricsBatch, error) {
+func (w Watcher) getAll() (metric.MetricsBatch, error) {
 	var mb metric.MetricsBatch
 
 	for name, value := range w.gm {
 		v := float64(value)
 		m, _ := metric.NewMetrics(name, metric.GaugeType, nil, &v)
-		if cfg.NeedSign() {
-			sgnErr := m.Sign(cfg.Key)
+		if w.config.NeedSign() {
+			sgnErr := m.Sign(w.config.Key)
 			if sgnErr != nil {
 				return metric.MetricsBatch{}, sgnErr
 			}
@@ -126,8 +128,8 @@ func (w Watcher) getAll(cfg *config.AgentConfig) (metric.MetricsBatch, error) {
 	for name, value := range w.cm {
 		v := int64(value)
 		m, _ := metric.NewMetrics(name, metric.CounterType, &v, nil)
-		if cfg.NeedSign() {
-			sgnErr := m.Sign(cfg.Key)
+		if w.config.NeedSign() {
+			sgnErr := m.Sign(w.config.Key)
 			if sgnErr != nil {
 				return metric.MetricsBatch{}, sgnErr
 			}
@@ -138,43 +140,60 @@ func (w Watcher) getAll(cfg *config.AgentConfig) (metric.MetricsBatch, error) {
 	return mb, nil
 }
 
-func (w Watcher) Run(cfg *config.AgentConfig) error {
-	if cfg.PollInterval >= cfg.ReportInterval {
+func (w Watcher) Run() error {
+	if w.config.PollInterval >= w.config.ReportInterval {
 		errMsg := fmt.Sprintf(
 			"update duration (%d) should be less than send duration (%d)",
-			cfg.PollInterval,
-			cfg.ReportInterval)
+			w.config.PollInterval,
+			w.config.ReportInterval)
 		return errors.New(errMsg)
 	}
 
-	updMetricsTicker := time.NewTicker(cfg.PollInterval)
-	sendMetricsTicker := time.NewTicker(cfg.ReportInterval)
+	updMetricsTicker := time.NewTicker(w.config.PollInterval)
+	sendMetricsTicker := time.NewTicker(w.config.ReportInterval)
 
-	updURL := url.URL{
-		Scheme: scheme,
-		Host:   cfg.Address,
-	}
-
-	var rms runtime.MemStats
+	metricChan := make(chan metric.MetricsBatch, 10)
+	errChan := make(chan error)
 
 	for {
 		select {
 		case <-updMetricsTicker.C:
-			runtime.ReadMemStats(&rms)
-			w.update(rms)
+			go w.poll(metricChan, errChan)
 		case <-sendMetricsTicker.C:
-			mb, amErr := w.getAll(cfg)
-			if amErr != nil {
-				fmt.Printf("Error while create list to send report: %s", amErr)
-			}
-
-			updURL.Path = "/updates/"
-			if err := sendMetrics(updURL.String(), mb); err != nil {
-				fmt.Println(err)
-			} else {
-				fmt.Printf("%d metrics was sent successfull\n", len(mb.Metrics))
+			for i := 0; i <= w.config.RateLimit; i += 1 {
+				go w.send(metricChan)
 			}
 		}
+	}
+}
+
+func (w Watcher) poll(mbChan chan<- metric.MetricsBatch, errChan chan<- error) {
+	var rms runtime.MemStats
+
+	runtime.ReadMemStats(&rms)
+	w.update(rms)
+	mb, err := w.getAll()
+	if err != nil {
+		errChan <- err
+	}
+
+	mbChan <- mb
+}
+
+func (w Watcher) send(mb <-chan metric.MetricsBatch) {
+	fmt.Println("CHANNEL LEN: ", len(mb))
+	batch := <-mb
+
+	updUrl := url.URL{
+		Scheme: scheme,
+		Host:   w.config.Address,
+	}
+
+	updUrl.Path = "/updates/"
+	if err := sendMetrics(updUrl.String(), batch); err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Printf("%d metrics was sent successfull\n", len(batch.Metrics))
 	}
 }
 

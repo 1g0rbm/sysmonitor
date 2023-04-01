@@ -16,6 +16,7 @@ const (
 	defaultRestore        = true
 	defaultKey            = ""
 	defaultDBDsn          = ""
+	defaultRateLimit      = 8
 )
 
 var (
@@ -27,6 +28,7 @@ var (
 	restore        bool
 	key            string
 	DBDsn          string
+	rateLimit      int
 )
 
 type ServerConfig struct {
@@ -43,6 +45,7 @@ type AgentConfig struct {
 	ReportInterval time.Duration
 	PollInterval   time.Duration
 	Key            string
+	RateLimit      int
 }
 
 func GetConfigServer() *ServerConfig {
@@ -82,6 +85,7 @@ func GetConfigAgent() *AgentConfig {
 	flag.DurationVar(&reportInterval, "r", defaultReportInterval, "-r=<VALUE>")
 	flag.DurationVar(&pollInterval, "p", defaultPollInterval, "-p=<VALUE>")
 	flag.StringVar(&key, "k", defaultKey, "-k=<KEY>")
+	flag.IntVar(&rateLimit, "l", defaultRateLimit, "-l=<VALUE>")
 
 	flag.Parse()
 
@@ -90,6 +94,7 @@ func GetConfigAgent() *AgentConfig {
 		ReportInterval: getEnvDuration("REPORT_INTERVAL", reportInterval),
 		PollInterval:   getEnvDuration("POLL_INTERVAL", pollInterval),
 		Key:            getEnvString("KEY", key),
+		RateLimit:      getEnvInt("RATE_LIMIT", rateLimit),
 	}
 }
 
@@ -131,4 +136,18 @@ func getEnvBool(name string, defaultValue bool) bool {
 		return defaultValue
 	}
 	return b
+}
+
+func getEnvInt(name string, defaultValue int) int {
+	value, ok := os.LookupEnv(name)
+	if !ok {
+		return defaultValue
+	}
+
+	i, err := strconv.ParseInt(value, 10, 64)
+	if err != nil {
+		return defaultValue
+	}
+
+	return int(i)
 }

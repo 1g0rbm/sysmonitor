@@ -8,9 +8,8 @@ import (
 )
 
 func main() {
-	w := watcher.NewWatcher()
-
 	agentConfig := config.GetConfigAgent()
+	w := watcher.NewWatcher(agentConfig)
 
-	log.Fatal(w.Run(agentConfig))
+	log.Fatal(w.Run())
 }

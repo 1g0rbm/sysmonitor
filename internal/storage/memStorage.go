@@ -10,7 +10,6 @@ import (
 	"github.com/1g0rbm/sysmonitor/internal/metric"
 )
 
-// MemStorage ToDo Data Race
 type MemStorage struct {
 	data map[string]metric.IMetric
 	mu   sync.RWMutex

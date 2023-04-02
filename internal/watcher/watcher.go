@@ -232,13 +232,13 @@ func (w *Watcher) poll(mbChan chan<- metric.MetricsBatch, errChan chan<- error) 
 func (w *Watcher) send(mb <-chan metric.MetricsBatch) {
 	batch := <-mb
 
-	updUrl := url.URL{
+	updURL := url.URL{
 		Scheme: scheme,
 		Host:   w.config.Address,
 	}
 
-	updUrl.Path = "/updates/"
-	if err := sendMetrics(updUrl.String(), batch); err != nil {
+	updURL.Path = "/updates/"
+	if err := sendMetrics(updURL.String(), batch); err != nil {
 		fmt.Println(err)
 	} else {
 		fmt.Printf("%d metrics was sent successfull\n", len(batch.Metrics))

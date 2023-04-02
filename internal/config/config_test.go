@@ -100,7 +100,7 @@ func TestGetConfigAgent(t *testing.T) {
 				ReportInterval: 10 * time.Second,
 				PollInterval:   2 * time.Second,
 				Key:            "",
-				RateLimit:      8,
+				RateLimit:      4,
 			},
 		},
 	}

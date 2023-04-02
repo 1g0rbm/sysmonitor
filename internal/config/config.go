@@ -16,7 +16,7 @@ const (
 	defaultRestore        = true
 	defaultKey            = ""
 	defaultDBDsn          = ""
-	defaultRateLimit      = 8
+	defaultRateLimit      = 4
 )
 
 var (

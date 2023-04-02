@@ -9,7 +9,10 @@ import (
 	"net/http"
 	"net/url"
 	"runtime"
+	"sync"
 	"time"
+
+	"github.com/shirou/gopsutil/v3/mem"
 
 	"github.com/1g0rbm/sysmonitor/internal/config"
 	"github.com/1g0rbm/sysmonitor/internal/metric"
@@ -21,37 +24,50 @@ const (
 	requestTimeout        = 5 * time.Second
 )
 
-type gMetrics map[string]metric.Gauge
+type gMetrics struct {
+	m  map[string]metric.Gauge
+	mu sync.RWMutex
+}
 
-func (gm gMetrics) update(m runtime.MemStats) {
-	gm["Alloc"] = metric.Gauge(m.Alloc)
-	gm["BuckHashSys"] = metric.Gauge(m.BuckHashSys)
-	gm["Frees"] = metric.Gauge(m.Frees)
-	gm["GCCPUFraction"] = metric.Gauge(m.GCCPUFraction)
-	gm["GCSys"] = metric.Gauge(m.GCSys)
-	gm["HeapAlloc"] = metric.Gauge(m.HeapAlloc)
-	gm["HeapIdle"] = metric.Gauge(m.HeapIdle)
-	gm["HeapInuse"] = metric.Gauge(m.HeapInuse)
-	gm["HeapObjects"] = metric.Gauge(m.HeapObjects)
-	gm["HeapReleased"] = metric.Gauge(m.HeapReleased)
-	gm["HeapSys"] = metric.Gauge(m.HeapSys)
-	gm["LastGC"] = metric.Gauge(m.LastGC)
-	gm["Lookups"] = metric.Gauge(m.Lookups)
-	gm["MCacheInuse"] = metric.Gauge(m.MCacheInuse)
-	gm["MCacheSys"] = metric.Gauge(m.MCacheSys)
-	gm["MSpanInuse"] = metric.Gauge(m.MSpanInuse)
-	gm["MSpanSys"] = metric.Gauge(m.MSpanSys)
-	gm["Mallocs"] = metric.Gauge(m.Mallocs)
-	gm["NextGC"] = metric.Gauge(m.NextGC)
-	gm["NumForcedGC"] = metric.Gauge(m.NumForcedGC)
-	gm["NumGC"] = metric.Gauge(m.NumGC)
-	gm["OtherSys"] = metric.Gauge(m.OtherSys)
-	gm["PauseTotalNs"] = metric.Gauge(m.PauseTotalNs)
-	gm["StackInuse"] = metric.Gauge(m.StackInuse)
-	gm["StackSys"] = metric.Gauge(m.StackInuse)
-	gm["Sys"] = metric.Gauge(m.Sys)
-	gm["TotalAlloc"] = metric.Gauge(m.TotalAlloc)
-	gm["RandomValue"] = metric.Gauge(rand.Float64())
+func (gm *gMetrics) update(m runtime.MemStats) {
+	gm.mu.Lock()
+	defer gm.mu.Unlock()
+	gm.m["Alloc"] = metric.Gauge(m.Alloc)
+	gm.m["BuckHashSys"] = metric.Gauge(m.BuckHashSys)
+	gm.m["Frees"] = metric.Gauge(m.Frees)
+	gm.m["GCCPUFraction"] = metric.Gauge(m.GCCPUFraction)
+	gm.m["GCSys"] = metric.Gauge(m.GCSys)
+	gm.m["HeapAlloc"] = metric.Gauge(m.HeapAlloc)
+	gm.m["HeapIdle"] = metric.Gauge(m.HeapIdle)
+	gm.m["HeapInuse"] = metric.Gauge(m.HeapInuse)
+	gm.m["HeapObjects"] = metric.Gauge(m.HeapObjects)
+	gm.m["HeapReleased"] = metric.Gauge(m.HeapReleased)
+	gm.m["HeapSys"] = metric.Gauge(m.HeapSys)
+	gm.m["LastGC"] = metric.Gauge(m.LastGC)
+	gm.m["Lookups"] = metric.Gauge(m.Lookups)
+	gm.m["MCacheInuse"] = metric.Gauge(m.MCacheInuse)
+	gm.m["MCacheSys"] = metric.Gauge(m.MCacheSys)
+	gm.m["MSpanInuse"] = metric.Gauge(m.MSpanInuse)
+	gm.m["MSpanSys"] = metric.Gauge(m.MSpanSys)
+	gm.m["Mallocs"] = metric.Gauge(m.Mallocs)
+	gm.m["NextGC"] = metric.Gauge(m.NextGC)
+	gm.m["NumForcedGC"] = metric.Gauge(m.NumForcedGC)
+	gm.m["NumGC"] = metric.Gauge(m.NumGC)
+	gm.m["OtherSys"] = metric.Gauge(m.OtherSys)
+	gm.m["PauseTotalNs"] = metric.Gauge(m.PauseTotalNs)
+	gm.m["StackInuse"] = metric.Gauge(m.StackInuse)
+	gm.m["StackSys"] = metric.Gauge(m.StackInuse)
+	gm.m["Sys"] = metric.Gauge(m.Sys)
+	gm.m["TotalAlloc"] = metric.Gauge(m.TotalAlloc)
+	gm.m["RandomValue"] = metric.Gauge(rand.Float64())
+}
+
+func (gm *gMetrics) updateAdditional(v *mem.VirtualMemoryStat) {
+	gm.mu.Lock()
+	defer gm.mu.Unlock()
+	gm.m["TotalMemory"] = metric.Gauge(v.Total)
+	gm.m["FreeMemory"] = metric.Gauge(v.Free)
+	gm.m["CPUutilization1"] = metric.Gauge(v.UsedPercent)
 }
 
 type cMetrics map[string]metric.Counter
@@ -69,34 +85,39 @@ type Watcher struct {
 func NewWatcher(cfg *config.AgentConfig) Watcher {
 	return Watcher{
 		gm: gMetrics{
-			"Alloc":         0,
-			"BuckHashSys":   0,
-			"Frees":         0,
-			"GCCPUFraction": 0,
-			"GCSys":         0,
-			"HeapAlloc":     0,
-			"HeapIdle":      0,
-			"HeapInuse":     0,
-			"HeapObjects":   0,
-			"HeapReleased":  0,
-			"HeapSys":       0,
-			"LastGC":        0,
-			"Lookups":       0,
-			"MCacheInuse":   0,
-			"MCacheSys":     0,
-			"MSpanInuse":    0,
-			"MSpanSys":      0,
-			"Mallocs":       0,
-			"NextGC":        0,
-			"NumForcedGC":   0,
-			"NumGC":         0,
-			"OtherSys":      0,
-			"PauseTotalNs":  0,
-			"StackInuse":    0,
-			"StackSys":      0,
-			"Sys":           0,
-			"TotalAlloc":    0,
-			"RandomValue":   0,
+			m: map[string]metric.Gauge{
+				"Alloc":           0,
+				"BuckHashSys":     0,
+				"Frees":           0,
+				"GCCPUFraction":   0,
+				"GCSys":           0,
+				"HeapAlloc":       0,
+				"HeapIdle":        0,
+				"HeapInuse":       0,
+				"HeapObjects":     0,
+				"HeapReleased":    0,
+				"HeapSys":         0,
+				"LastGC":          0,
+				"Lookups":         0,
+				"MCacheInuse":     0,
+				"MCacheSys":       0,
+				"MSpanInuse":      0,
+				"MSpanSys":        0,
+				"Mallocs":         0,
+				"NextGC":          0,
+				"NumForcedGC":     0,
+				"NumGC":           0,
+				"OtherSys":        0,
+				"PauseTotalNs":    0,
+				"StackInuse":      0,
+				"StackSys":        0,
+				"Sys":             0,
+				"TotalAlloc":      0,
+				"RandomValue":     0,
+				"TotalMemory":     0,
+				"FreeMemory":      0,
+				"CPUutilization1": 0,
+			},
 		},
 		cm: cMetrics{
 			"PollCount": 0,
@@ -105,15 +126,31 @@ func NewWatcher(cfg *config.AgentConfig) Watcher {
 	}
 }
 
-func (w Watcher) update(rms runtime.MemStats) {
+func (w *Watcher) update() {
+	var rms runtime.MemStats
+	runtime.ReadMemStats(&rms)
+
 	w.cm.update()
 	w.gm.update(rms)
 }
 
-func (w Watcher) getAll() (metric.MetricsBatch, error) {
+func (w *Watcher) updateAdditional() error {
+	v, err := mem.VirtualMemory()
+	if err != nil {
+		return err
+	}
+	w.gm.updateAdditional(v)
+
+	return nil
+}
+
+func (w *Watcher) getAll() (metric.MetricsBatch, error) {
+	w.gm.mu.RLock()
+	defer w.gm.mu.RUnlock()
+
 	var mb metric.MetricsBatch
 
-	for name, value := range w.gm {
+	for name, value := range w.gm.m {
 		v := float64(value)
 		m, _ := metric.NewMetrics(name, metric.GaugeType, nil, &v)
 		if w.config.NeedSign() {
@@ -140,7 +177,7 @@ func (w Watcher) getAll() (metric.MetricsBatch, error) {
 	return mb, nil
 }
 
-func (w Watcher) Run() error {
+func (w *Watcher) Run() error {
 	if w.config.PollInterval >= w.config.ReportInterval {
 		errMsg := fmt.Sprintf(
 			"update duration (%d) should be less than send duration (%d)",
@@ -152,26 +189,38 @@ func (w Watcher) Run() error {
 	updMetricsTicker := time.NewTicker(w.config.PollInterval)
 	sendMetricsTicker := time.NewTicker(w.config.ReportInterval)
 
-	metricChan := make(chan metric.MetricsBatch, 10)
+	metricChan := make(chan metric.MetricsBatch)
 	errChan := make(chan error)
+
+	var updGroup sync.WaitGroup
 
 	for {
 		select {
 		case <-updMetricsTicker.C:
+			updGroup.Add(2)
+			go func() {
+				w.update()
+				updGroup.Done()
+			}()
+			go func() {
+				if err := w.updateAdditional(); err != nil {
+					errChan <- err
+				}
+				updGroup.Done()
+			}()
+			updGroup.Wait()
 			go w.poll(metricChan, errChan)
 		case <-sendMetricsTicker.C:
 			for i := 0; i <= w.config.RateLimit; i += 1 {
 				go w.send(metricChan)
 			}
+		case err := <-errChan:
+			fmt.Printf("ERROR: %s \n", err)
 		}
 	}
 }
 
-func (w Watcher) poll(mbChan chan<- metric.MetricsBatch, errChan chan<- error) {
-	var rms runtime.MemStats
-
-	runtime.ReadMemStats(&rms)
-	w.update(rms)
+func (w *Watcher) poll(mbChan chan<- metric.MetricsBatch, errChan chan<- error) {
 	mb, err := w.getAll()
 	if err != nil {
 		errChan <- err
@@ -180,8 +229,7 @@ func (w Watcher) poll(mbChan chan<- metric.MetricsBatch, errChan chan<- error) {
 	mbChan <- mb
 }
 
-func (w Watcher) send(mb <-chan metric.MetricsBatch) {
-	fmt.Println("CHANNEL LEN: ", len(mb))
+func (w *Watcher) send(mb <-chan metric.MetricsBatch) {
 	batch := <-mb
 
 	updUrl := url.URL{

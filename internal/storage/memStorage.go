@@ -120,9 +120,6 @@ func (ms *MemStorage) Update(m metric.IMetric) (metric.IMetric, error) {
 }
 
 func (ms *MemStorage) BatchUpdate(sm []metric.IMetric) error {
-	ms.mu.Lock()
-	defer ms.mu.Unlock()
-
 	for _, m := range sm {
 		_, err := ms.Update(m)
 		if err != nil {
@@ -134,9 +131,6 @@ func (ms *MemStorage) BatchUpdate(sm []metric.IMetric) error {
 }
 
 func (ms *MemStorage) Restore(filepath string) (err error) {
-	ms.mu.Lock()
-	defer ms.mu.Unlock()
-
 	mr, err := fs.NewMetricReader(filepath)
 
 	defer func(mr *fs.MetricReader) {
@@ -167,9 +161,6 @@ func (ms *MemStorage) Restore(filepath string) (err error) {
 }
 
 func (ms *MemStorage) BackupData(path string) error {
-	ms.mu.RLock()
-	defer ms.mu.RUnlock()
-
 	mw, err := fs.NewMetricWriter(path)
 	if err != nil {
 		return err

@@ -13,10 +13,10 @@ import (
 // MemStorage ToDo Data Race
 type MemStorage struct {
 	data map[string]metric.IMetric
-	mu   *sync.RWMutex
+	mu   sync.RWMutex
 }
 
-func (ms MemStorage) Find(limit int, offset int) (map[string]metric.IMetric, error) {
+func (ms *MemStorage) Find(limit int, offset int) (map[string]metric.IMetric, error) {
 	ms.mu.RLock()
 	defer ms.mu.RUnlock()
 
@@ -40,7 +40,7 @@ func (ms MemStorage) Find(limit int, offset int) (map[string]metric.IMetric, err
 	return result, nil
 }
 
-func (ms MemStorage) Get(name string) (metric.IMetric, error) {
+func (ms *MemStorage) Get(name string) (metric.IMetric, error) {
 	ms.mu.RLock()
 	defer ms.mu.RUnlock()
 
@@ -53,7 +53,10 @@ func (ms MemStorage) Get(name string) (metric.IMetric, error) {
 	return v, nil
 }
 
-func (ms MemStorage) GetCounter(name string) (metric.CounterMetric, error) {
+func (ms *MemStorage) GetCounter(name string) (metric.CounterMetric, error) {
+	ms.mu.RLock()
+	defer ms.mu.RUnlock()
+
 	v, ok := ms.data[name]
 	if !ok {
 		ErrMetricNotFound = fmt.Errorf("metric not found by name '%s'", name)
@@ -70,7 +73,7 @@ func (ms MemStorage) GetCounter(name string) (metric.CounterMetric, error) {
 	return t, nil
 }
 
-func (ms MemStorage) GetGauge(name string) (metric.GaugeMetric, error) {
+func (ms *MemStorage) GetGauge(name string) (metric.GaugeMetric, error) {
 	ms.mu.RLock()
 	defer ms.mu.RUnlock()
 
@@ -90,19 +93,16 @@ func (ms MemStorage) GetGauge(name string) (metric.GaugeMetric, error) {
 	return t, nil
 }
 
-func (ms MemStorage) Update(m metric.IMetric) (metric.IMetric, error) {
+func (ms *MemStorage) Update(m metric.IMetric) (metric.IMetric, error) {
 	ms.mu.Lock()
 	defer ms.mu.Unlock()
 
 	switch m.Type() {
 	case metric.CounterType:
-		em, emErr := ms.Get(m.Name())
-		if emErr != nil && errors.Is(ErrMetricNotFound, emErr) {
+		em, ok := ms.data[m.Name()]
+		if !ok {
 			ms.data[m.Name()] = m
 			return m, nil
-		}
-		if emErr != nil {
-			return nil, emErr
 		}
 
 		updM, updErr := m.Update(em)
@@ -120,7 +120,7 @@ func (ms MemStorage) Update(m metric.IMetric) (metric.IMetric, error) {
 	}
 }
 
-func (ms MemStorage) BatchUpdate(sm []metric.IMetric) error {
+func (ms *MemStorage) BatchUpdate(sm []metric.IMetric) error {
 	ms.mu.Lock()
 	defer ms.mu.Unlock()
 
@@ -134,7 +134,7 @@ func (ms MemStorage) BatchUpdate(sm []metric.IMetric) error {
 	return nil
 }
 
-func (ms MemStorage) Restore(filepath string) (err error) {
+func (ms *MemStorage) Restore(filepath string) (err error) {
 	ms.mu.Lock()
 	defer ms.mu.Unlock()
 
@@ -167,7 +167,7 @@ func (ms MemStorage) Restore(filepath string) (err error) {
 	return
 }
 
-func (ms MemStorage) BackupData(path string) error {
+func (ms *MemStorage) BackupData(path string) error {
 	ms.mu.RLock()
 	defer ms.mu.RUnlock()
 
@@ -193,8 +193,8 @@ func (ms MemStorage) BackupData(path string) error {
 	return nil
 }
 
-func newMemStorage() MemStorage {
-	return MemStorage{
+func newMemStorage() *MemStorage {
+	return &MemStorage{
 		data: make(map[string]metric.IMetric),
 	}
 }

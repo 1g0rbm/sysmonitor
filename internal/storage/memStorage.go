@@ -4,23 +4,30 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"sync"
 
 	"github.com/1g0rbm/sysmonitor/internal/fs"
 	"github.com/1g0rbm/sysmonitor/internal/metric"
 )
 
 // MemStorage ToDo Data Race
-type MemStorage map[string]metric.IMetric
+type MemStorage struct {
+	data map[string]metric.IMetric
+	mu   *sync.RWMutex
+}
 
 func (ms MemStorage) Find(limit int, offset int) (map[string]metric.IMetric, error) {
-	if offset < 0 || offset >= len(ms) || limit < 0 {
+	ms.mu.RLock()
+	defer ms.mu.RUnlock()
+
+	if offset < 0 || offset >= len(ms.data) || limit < 0 {
 		return nil, errors.New("invalid input parameters")
 	}
 
 	cnt := 0
 	result := make(map[string]metric.IMetric)
 
-	for key, m := range ms {
+	for key, m := range ms.data {
 		if cnt >= offset {
 			result[key] = m
 			if len(result) == limit {
@@ -34,7 +41,10 @@ func (ms MemStorage) Find(limit int, offset int) (map[string]metric.IMetric, err
 }
 
 func (ms MemStorage) Get(name string) (metric.IMetric, error) {
-	v, ok := ms[name]
+	ms.mu.RLock()
+	defer ms.mu.RUnlock()
+
+	v, ok := ms.data[name]
 	if !ok {
 		ErrMetricNotFound = fmt.Errorf("metric not found by name '%s'", name)
 		return nil, ErrMetricNotFound
@@ -44,7 +54,7 @@ func (ms MemStorage) Get(name string) (metric.IMetric, error) {
 }
 
 func (ms MemStorage) GetCounter(name string) (metric.CounterMetric, error) {
-	v, ok := ms[name]
+	v, ok := ms.data[name]
 	if !ok {
 		ErrMetricNotFound = fmt.Errorf("metric not found by name '%s'", name)
 		return metric.CounterMetric{}, ErrMetricNotFound
@@ -61,7 +71,10 @@ func (ms MemStorage) GetCounter(name string) (metric.CounterMetric, error) {
 }
 
 func (ms MemStorage) GetGauge(name string) (metric.GaugeMetric, error) {
-	v, ok := ms[name]
+	ms.mu.RLock()
+	defer ms.mu.RUnlock()
+
+	v, ok := ms.data[name]
 	if !ok {
 		ErrMetricNotFound = fmt.Errorf("metric not found by name '%s'", name)
 		return metric.GaugeMetric{}, ErrMetricNotFound
@@ -78,11 +91,14 @@ func (ms MemStorage) GetGauge(name string) (metric.GaugeMetric, error) {
 }
 
 func (ms MemStorage) Update(m metric.IMetric) (metric.IMetric, error) {
+	ms.mu.Lock()
+	defer ms.mu.Unlock()
+
 	switch m.Type() {
 	case metric.CounterType:
 		em, emErr := ms.Get(m.Name())
 		if emErr != nil && errors.Is(ErrMetricNotFound, emErr) {
-			ms[m.Name()] = m
+			ms.data[m.Name()] = m
 			return m, nil
 		}
 		if emErr != nil {
@@ -94,10 +110,10 @@ func (ms MemStorage) Update(m metric.IMetric) (metric.IMetric, error) {
 			return nil, updErr
 		}
 
-		ms[updM.Name()] = updM
+		ms.data[updM.Name()] = updM
 		return updM, nil
 	case metric.GaugeType:
-		ms[m.Name()] = m
+		ms.data[m.Name()] = m
 		return m, nil
 	default:
 		return nil, fmt.Errorf("undefined metric type '%s'", m.Type())
@@ -105,6 +121,9 @@ func (ms MemStorage) Update(m metric.IMetric) (metric.IMetric, error) {
 }
 
 func (ms MemStorage) BatchUpdate(sm []metric.IMetric) error {
+	ms.mu.Lock()
+	defer ms.mu.Unlock()
+
 	for _, m := range sm {
 		_, err := ms.Update(m)
 		if err != nil {
@@ -116,6 +135,9 @@ func (ms MemStorage) BatchUpdate(sm []metric.IMetric) error {
 }
 
 func (ms MemStorage) Restore(filepath string) (err error) {
+	ms.mu.Lock()
+	defer ms.mu.Unlock()
+
 	mr, err := fs.NewMetricReader(filepath)
 
 	defer func(mr *fs.MetricReader) {
@@ -146,12 +168,15 @@ func (ms MemStorage) Restore(filepath string) (err error) {
 }
 
 func (ms MemStorage) BackupData(path string) error {
+	ms.mu.RLock()
+	defer ms.mu.RUnlock()
+
 	mw, err := fs.NewMetricWriter(path)
 	if err != nil {
 		return err
 	}
 
-	for _, m := range ms {
+	for _, m := range ms.data {
 		metrics, imErr := metric.NewMetricsFromIMetric(m)
 		if imErr != nil {
 			return imErr
@@ -169,7 +194,9 @@ func (ms MemStorage) BackupData(path string) error {
 }
 
 func newMemStorage() MemStorage {
-	return make(MemStorage)
+	return MemStorage{
+		data: make(map[string]metric.IMetric),
+	}
 }
 
 func NewMemStorage() Storage {

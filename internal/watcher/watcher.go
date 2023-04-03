@@ -24,6 +24,10 @@ const (
 	requestTimeout        = 5 * time.Second
 )
 
+type Job struct {
+	batch metric.MetricsBatch
+}
+
 type gMetrics struct {
 	m  map[string]metric.Gauge
 	mu sync.RWMutex
@@ -187,51 +191,70 @@ func (w *Watcher) Run() error {
 	}
 
 	updMetricsTicker := time.NewTicker(w.config.PollInterval)
-	sendMetricsTicker := time.NewTicker(w.config.ReportInterval)
+	sndMetricsTicker := time.NewTicker(w.config.ReportInterval)
 
-	metricChan := make(chan metric.MetricsBatch)
+	jobCh := make(chan *Job)
 	errChan := make(chan error)
 
-	var updGroup sync.WaitGroup
-
-	for {
-		select {
-		case <-updMetricsTicker.C:
-			updGroup.Add(2)
-			go func() {
+	go func() {
+		for {
+			select {
+			case <-updMetricsTicker.C:
 				w.update()
-				updGroup.Done()
-			}()
-			go func() {
+			}
+		}
+	}()
+
+	go func() {
+		for {
+			select {
+			case <-updMetricsTicker.C:
 				if err := w.updateAdditional(); err != nil {
 					errChan <- err
 				}
-				updGroup.Done()
-			}()
-			updGroup.Wait()
-			go w.poll(metricChan, errChan)
-		case <-sendMetricsTicker.C:
-			for i := 0; i <= w.config.RateLimit; i += 1 {
-				go w.send(metricChan)
 			}
+		}
+	}()
+
+	go func() {
+		for {
+			select {
+			case <-updMetricsTicker.C:
+				w.poll(jobCh, errChan)
+			}
+		}
+	}()
+
+	for i := 0; i < w.config.RateLimit; i++ {
+		go func() {
+			for {
+				select {
+				case <-sndMetricsTicker.C:
+					job := <-jobCh
+					w.send(job.batch)
+				}
+			}
+		}()
+	}
+
+	for {
+		select {
 		case err := <-errChan:
-			fmt.Printf("ERROR: %s \n", err)
+			fmt.Printf("ERR: %s\n", err)
 		}
 	}
 }
 
-func (w *Watcher) poll(mbChan chan<- metric.MetricsBatch, errChan chan<- error) {
-	mb, err := w.getAll()
+func (w *Watcher) poll(jobCh chan<- *Job, errChan chan<- error) {
+	batch, err := w.getAll()
 	if err != nil {
 		errChan <- err
 	}
 
-	mbChan <- mb
+	jobCh <- &Job{batch}
 }
 
-func (w *Watcher) send(mb <-chan metric.MetricsBatch) {
-	batch := <-mb
-
+func (w *Watcher) send(batch metric.MetricsBatch) {
 	updURL := url.URL{
 		Scheme: scheme,
 		Host:   w.config.Address,

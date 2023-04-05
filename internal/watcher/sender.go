@@ -26,7 +26,7 @@ func newSender(config *config.AgentConfig) sender {
 	return sender{config}
 }
 
-func (s *sender) Run(jobCh <-chan *Job, errCh chan<- error) {
+func (s *sender) Run(jobCh <-chan *Job, errCh chan<- error, ctx context.Context) {
 	updURL := url.URL{
 		Scheme: scheme,
 		Host:   s.config.Address,
@@ -48,6 +48,8 @@ func (s *sender) Run(jobCh <-chan *Job, errCh chan<- error) {
 					}
 				}()
 			}
+		case <-ctx.Done():
+			return
 		}
 	}
 }

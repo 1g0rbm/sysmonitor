@@ -82,12 +82,14 @@ func TestGetConfigAgent(t *testing.T) {
 				"REPORT_INTERVAL": "25s",
 				"POLL_INTERVAL":   "10s",
 				"KEY":             "qwerty",
+				"RATE_LIMIT":      "5",
 			},
 			want: &AgentConfig{
 				Address:        "127.0.0.1:8000",
 				ReportInterval: 25 * time.Second,
 				PollInterval:   10 * time.Second,
 				Key:            "qwerty",
+				RateLimit:      5,
 			},
 		},
 		{
@@ -98,6 +100,7 @@ func TestGetConfigAgent(t *testing.T) {
 				ReportInterval: 10 * time.Second,
 				PollInterval:   2 * time.Second,
 				Key:            "",
+				RateLimit:      4,
 			},
 		},
 	}

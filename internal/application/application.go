@@ -67,7 +67,7 @@ func NewApp(s storage.Storage, cfg *config.ServerConfig, l zerolog.Logger) (app 
 
 func (app App) Run() (err error) {
 	if app.config.NeedRestore() {
-		mem, itIsMem := app.storage.(storage.MemStorage)
+		mem, itIsMem := app.storage.(*storage.MemStorage)
 		if !itIsMem {
 			return fmt.Errorf("try to restor non memstorage storage")
 		}
@@ -90,7 +90,7 @@ func (app App) Run() (err error) {
 			for {
 				select {
 				case <-dumpTicker.C:
-					mem, itIsMem := app.storage.(storage.MemStorage)
+					mem, itIsMem := app.storage.(*storage.MemStorage)
 					if !itIsMem {
 						err = fmt.Errorf("try store datra for non memstorage")
 					}
@@ -116,7 +116,7 @@ func (app App) Shutdown(ctx context.Context) error {
 		}
 	}
 
-	mem, itIsMem := app.storage.(storage.MemStorage)
+	mem, itIsMem := app.storage.(*storage.MemStorage)
 	if itIsMem {
 		if backUpErr := mem.BackupData(app.config.StoreFile); backUpErr != nil {
 			return backUpErr

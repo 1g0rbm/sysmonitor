@@ -20,37 +20,36 @@ const (
 
 type sender struct {
 	config *config.AgentConfig
+	jobCh  <-chan *Job
+	errCh  chan<- error
 }
 
-func newSender(config *config.AgentConfig) sender {
-	return sender{config}
+func newSender(config *config.AgentConfig, jobCh <-chan *Job, errCh chan<- error) sender {
+	return sender{config, jobCh, errCh}
 }
 
-func (s *sender) Run(jobCh <-chan *Job, errCh chan<- error, ctx context.Context) {
+func (s *sender) Run(ctx context.Context) {
 	updURL := url.URL{
 		Scheme: scheme,
 		Host:   s.config.Address,
 	}
 	updURL.Path = "/updates/"
-	ticker := time.NewTicker(s.config.ReportInterval)
 
-	for {
-		select {
-		case <-ticker.C:
-			for i := 0; i < s.config.RateLimit; i++ {
-				go func() {
-					for job := range jobCh {
-						if err := s.sendMetrics(updURL.String(), job.batch); err != nil {
-							errCh <- err
-						} else {
-							fmt.Printf("%d metrics was sent successfull\n", len(job.batch.Metrics))
-						}
+	for i := 0; i < s.config.RateLimit; i++ {
+		go func() {
+			for {
+				select {
+				case job := <-s.jobCh:
+					if err := s.sendMetrics(updURL.String(), job.batch); err != nil {
+						s.errCh <- err
+					} else {
+						fmt.Printf("%d metrics was sent successfull\n", len(job.batch.Metrics))
 					}
-				}()
+				case <-ctx.Done():
+					return
+				}
 			}
-		case <-ctx.Done():
-			return
-		}
+		}()
 	}
 }
 

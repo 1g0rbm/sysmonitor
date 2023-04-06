@@ -18,14 +18,21 @@ type Job struct {
 type Watcher struct {
 	poller poller
 	sender sender
+	jobCh  chan *Job
+	errCh  chan error
 	config *config.AgentConfig
 	logger zerolog.Logger
 }
 
 func NewWatcher(cfg *config.AgentConfig, logger zerolog.Logger) Watcher {
+	jobCh := make(chan *Job, cfg.RateLimit)
+	errCh := make(chan error)
+
 	return Watcher{
-		poller: newPoller(cfg),
-		sender: newSender(cfg),
+		poller: newPoller(cfg, jobCh, errCh),
+		sender: newSender(cfg, jobCh, errCh),
+		jobCh:  jobCh,
+		errCh:  errCh,
 		config: cfg,
 		logger: logger,
 	}
@@ -42,15 +49,12 @@ func (w *Watcher) Run(ctx context.Context) error {
 
 	w.logger.Info().Msg("Agent started")
 
-	jobCh := make(chan *Job, w.config.RateLimit)
-	errChan := make(chan error)
-
-	w.poller.Run(jobCh, errChan, ctx)
-	w.sender.Run(jobCh, errChan, ctx)
+	w.poller.Run(ctx)
+	w.sender.Run(ctx)
 
 	for {
 		select {
-		case err := <-errChan:
+		case err := <-w.errCh:
 			w.logger.Error().Msg(err.Error())
 		case <-ctx.Done():
 			return nil

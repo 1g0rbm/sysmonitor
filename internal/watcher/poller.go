@@ -15,40 +15,44 @@ type poller struct {
 	config *config.AgentConfig
 	cm     cMetrics
 	gm     gMetrics
+	jobCh  chan<- *Job
+	errCh  chan<- error
 }
 
-func newPoller(config *config.AgentConfig) poller {
+func newPoller(config *config.AgentConfig, jobCh chan<- *Job, errCh chan<- error) poller {
 	return poller{
 		config: config,
 		gm:     newGMetrics(),
 		cm:     newCMetrics(),
+		jobCh:  jobCh,
+		errCh:  errCh,
 	}
 }
 
-func (p *poller) Run(jobCh chan<- *Job, errCh chan<- error, ctx context.Context) {
+func (p *poller) Run(ctx context.Context) {
 	ticker := time.NewTicker(p.config.PollInterval)
-	go p.updateBasicMetrics(ticker, ctx)
-	go p.updateAdditionalMetrics(ticker, errCh, ctx)
-	go p.writeBatch(ticker, jobCh, errCh, ctx)
+	go p.updateBasicMetrics(ctx, ticker)
+	go p.updateAdditionalMetrics(ctx, ticker)
+	go p.writeBatch(ctx, ticker)
 }
 
-func (p *poller) writeBatch(ticker *time.Ticker, jobCh chan<- *Job, errCh chan<- error, ctx context.Context) {
+func (p *poller) writeBatch(ctx context.Context, ticker *time.Ticker) {
 	for {
 		select {
 		case <-ticker.C:
 			batch, err := p.getBatch()
 			if err != nil {
-				errCh <- err
+				p.errCh <- err
 			}
 
-			jobCh <- &Job{batch}
+			p.jobCh <- &Job{batch}
 		case <-ctx.Done():
 			return
 		}
 	}
 }
 
-func (p *poller) updateBasicMetrics(ticker *time.Ticker, ctx context.Context) {
+func (p *poller) updateBasicMetrics(ctx context.Context, ticker *time.Ticker) {
 	var rms runtime.MemStats
 	for {
 		select {
@@ -62,13 +66,13 @@ func (p *poller) updateBasicMetrics(ticker *time.Ticker, ctx context.Context) {
 	}
 }
 
-func (p *poller) updateAdditionalMetrics(ticker *time.Ticker, errCh chan<- error, ctx context.Context) {
+func (p *poller) updateAdditionalMetrics(ctx context.Context, ticker *time.Ticker) {
 	for {
 		select {
 		case <-ticker.C:
 			vm, err := mem.VirtualMemory()
 			if err != nil {
-				errCh <- err
+				p.errCh <- err
 			}
 			p.gm.updateAdditional(vm)
 		case <-ctx.Done():

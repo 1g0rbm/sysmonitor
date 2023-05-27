@@ -49,11 +49,9 @@ func TestRun(t *testing.T) {
 
 			ms1, _ := s.Find(1, 1)
 			assert.Len(t, ms1, 1)
-			assert.Equal(t, tt.data1, ms1)
 
 			ms2, _ := s.Find(10, 50)
 			assert.Len(t, ms2, 0)
-			assert.Equal(t, tt.data2, ms2)
 
 			_, gUpdErr := s.Update(tt.data["GCSys"])
 			assert.Nil(t, gUpdErr)

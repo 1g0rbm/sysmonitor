@@ -1,12 +1,13 @@
 package watcher
 
 import (
-	"github.com/1g0rbm/sysmonitor/internal/config"
-	"github.com/1g0rbm/sysmonitor/internal/metric"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/1g0rbm/sysmonitor/internal/config"
+	"github.com/1g0rbm/sysmonitor/internal/metric"
 )
 
 func BenchmarkSender_SendMetrics(b *testing.B) {

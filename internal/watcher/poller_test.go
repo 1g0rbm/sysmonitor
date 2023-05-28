@@ -2,9 +2,10 @@ package watcher
 
 import (
 	"context"
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/1g0rbm/sysmonitor/internal/config"
 )

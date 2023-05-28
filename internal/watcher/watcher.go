@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"github.com/rs/zerolog"
 
 	"github.com/1g0rbm/sysmonitor/internal/config"

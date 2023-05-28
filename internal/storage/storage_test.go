@@ -8,6 +8,34 @@ import (
 	"github.com/1g0rbm/sysmonitor/internal/metric"
 )
 
+func BenchmarkCounterMetrics_Update(b *testing.B) {
+	s := NewMemStorage()
+
+	b.ResetTimer()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		newDelta := metric.Counter(i)
+		_, err := s.Update(metric.NewCounterMetric("counter_metric", newDelta))
+		if err != nil {
+			b.Fatal("Failed to update counter metric:", err)
+		}
+	}
+}
+
+func BenchmarkGaugeMetrics_Update(b *testing.B) {
+	s := NewMemStorage()
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		newValue := metric.Gauge(i)
+		_, err := s.Update(metric.NewGaugeMetric("gauge_metric", newValue))
+		if err != nil {
+			b.Fatal("Failed to update gauge metric:", err)
+		}
+	}
+}
+
 func TestRun(t *testing.T) {
 	m1, _ := metric.NewMetric("GCSys", metric.GaugeType, "2621440.000000")
 	m2, _ := metric.NewMetric("PollCounter", metric.CounterType, "10")
